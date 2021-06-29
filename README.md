@@ -30,17 +30,49 @@ defer str.deinit(); // owned bytes will be freed.
 ## Comparison and Sorting (Collation)
 Given the large amounts of data required for comparisons and sorting of Unicode strings, these operations
 are not included in the `Zigstr` struct to keep it light and fast. Comparison and sorting of strings
-can be found in the `Normalizer` and `Collator` structs. See the main `README` file for examples.
+can be found in the `Normalizer` and `Collator` structs of the [Ziglyph](https://github.com/jecolon/ziglyph)
+library.
 
 ## Display Width
-The `Width` struct contains methods to calculate the fixed-width cells a given code point or string 
-occupies in a fixed-width context such as a terminal emulator. Since these calculations are required
-for methods that *pad* the string in different alignments, operations like `padLeft`, `padRight`, and 
-`center` are part of the `Width` struct and not Zigstr. See the main `README` for examples.
+The `Width` struct of the [Ziglyph](https://github.com/jecolon/ziglyph) library contains methods to 
+calculate the fixed-width cells a given code point or string occupies in a fixed-width context such
+as a terminal emulator. Since these calculations are required for methods that *pad* the string in 
+different alignments, operations like `padLeft`, `padRight`, and `center` are part of the `Width` 
+struct and not Zigstr.
+
+## Integrating Zigstr in your Project
+In a `libs` subdirectory under the root of your project, clone this repository via
+
+```sh
+$  git clone https://github.com/jecolon/zigstr.git
+```
+
+Now in your build.zig, you can add:
+
+```zig
+exe.addPackagePath("Zigstr", "libs/zigstr/src/Zigstr.zig");
+```
+
+to the `exe` section for the executable where you wish to have Zigstr available. Now in the code, you
+can import `Zigstr` like this:
+
+```zig
+const Zigstr = @import("Zigstr");
+
+```
+
+Finally, you can build the project with:
+
+```sh
+$ zig build
+```
+
+Note that to build in release modes, either specify them in the `build.zig` file or on the command line
+via the `-Drelease-fast=true`, `-Drelease-small=true`, `-Drelease-safe=true` options to `zig build`.
 
 ## Usage Examples
 ```zig
-const Zigstr = @import("Ziglyph").Zigstr;
+const Zigstr = @import("Zigstr");
 
 test "Zigstr README tests" {
     var allocator = std.testing.allocator;
