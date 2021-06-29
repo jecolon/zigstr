@@ -1,0 +1,3 @@
+[submodule "src/ziglyph"]
+	path = src/ziglyph
+	url = https://github.com/jecolon/ziglyph

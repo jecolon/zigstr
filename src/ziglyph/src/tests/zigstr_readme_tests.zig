@@ -1,46 +1,10 @@
-# Zigstr
-A UTF-8 string type.
+const std = @import("std");
+const expect = std.testing.expect;
+const expectEqual = std.testing.expectEqual;
+const expectEqualStrings = std.testing.expectEqualStrings;
+const expectEqualSlices = std.testing.expectEqualSlices;
 
-## What? No Characters?
-Zigstr tries to emphasize the clear distinction between bytes (`u8`), code points (`u21`), and
-grapheme clusters (`[]const u8`) as per the Unicode standard. Note that the term *character* is glaringly
-missing here, as it tends to produce more confusion than clarity, and in fact Unicode has no concrete 
-*character* concept, only abstract characters are broadly mentioned. The closes concept resembling
-a human-perceivable *character in Unicode* is the Grapheme Cluster, represented here as the `Grapheme` 
-type returned from each call to the `next` method on a `GraphemeIterator` (see sample code below).
-
-## Ownership
-There are two possibilities when creating a new Zigstr:
-
-* You own the bytes, requiring the `deinit` method to free them.
-* You don't own the bytes, so `deinit` will not free them.
-
-To create a Zigstr in each of these circumstances:
-
-```zig
-// Here the slice is []const u8.
-var str = try Zigstr.fromBytes(allocator, "Hello");
-defer str.deinit(); // still need `deinit` to free other resources, but not the passed-in bytes.
-
-// Here the slice is []u8.
-var str = try Zigstr.fromOwnedBytes(allocator, slice);
-defer str.deinit(); // owned bytes will be freed.
-```
-
-## Comparison and Sorting (Collation)
-Given the large amounts of data required for comparisons and sorting of Unicode strings, these operations
-are not included in the `Zigstr` struct to keep it light and fast. Comparison and sorting of strings
-can be found in the `Normalizer` and `Collator` structs. See the main `README` file for examples.
-
-## Display Width
-The `Width` struct contains methods to calculate the fixed-width cells a given code point or string 
-occupies in a fixed-width context such as a terminal emulator. Since these calculations are required
-for methods that *pad* the string in different alignments, operations like `padLeft`, `padRight`, and 
-`center` are part of the `Width` struct and not Zigstr. See the main `README` for examples.
-
-## Usage Examples
-```zig
-const Zigstr = @import("Ziglyph").Zigstr;
+const Zigstr = @import("../zigstr/Zigstr.zig");
 
 test "Zigstr README tests" {
     var allocator = std.testing.allocator;
@@ -349,4 +313,3 @@ test "Zigstr README tests" {
     // Zigstr implements the std.fmt.format interface.
     std.debug.print("Zigstr: {}\n", .{str});
 }
-```
