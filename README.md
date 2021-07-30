@@ -41,10 +41,13 @@ different alignments, operations like `padLeft`, `padRight`, and `center` are pa
 struct and not Zigstr.
 
 ## Integrating Zigstr in your Project
-In a `libs` subdirectory under the root of your project, clone this repository via
+In a `libs` subdirectory under the root of your project, clone this repository, and update the `Ziglyph`
+submodule via:
 
 ```sh
-$  git clone https://github.com/jecolon/zigstr.git
+$ git clone https://github.com/jecolon/zigstr.git
+$ cd zigstr
+$ git submodule update --init src/ziglyph
 ```
 
 Now in your build.zig, you can add:
