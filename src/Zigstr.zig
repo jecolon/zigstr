@@ -5,9 +5,10 @@ const unicode = std.unicode;
 const ascii = @import("ascii.zig");
 const Letter = @import("ziglyph/src/Ziglyph.zig").Letter;
 const CodePointIterator = @import("ziglyph/src/Ziglyph.zig").CodePointIterator;
-const GraphemeIterator = @import("ziglyph/src/Ziglyph.zig").GraphemeIterator;
-const Grapheme = GraphemeIterator.Grapheme;
+const Grapheme = @import("ziglyph/src/Ziglyph.zig").Grapheme;
+const GraphemeIterator = Grapheme.GraphemeIterator;
 const Props = @import("ziglyph/src/Ziglyph.zig").PropList;
+const Ziglyph = @import("ziglyph/src/Ziglyph.zig");
 
 const Self = @This();
 
@@ -47,7 +48,7 @@ pub fn fromCodePoints(allocator: *mem.Allocator, code_points: []const u21) !Self
             .allocator = allocator,
             .bytes = blk_b: {
                 var al = try std.ArrayList(u8).initCapacity(allocator, code_points.len);
-                for (code_points) |cp, i| {
+                for (code_points) |cp| {
                     al.appendAssumeCapacity(@intCast(u8, cp));
                 }
                 break :blk_b al;
@@ -125,7 +126,7 @@ pub fn byteCount(self: Self) usize {
 
 /// codePointIter returns a code point iterator based on the bytes of this Zigstr.
 pub fn codePointIter(self: Self) !CodePointIterator {
-    return CodePointIterator.init(self.bytes.items);
+    return CodePointIterator{ .bytes = self.bytes.items };
 }
 
 /// codePoints returns the code points that make up this Zigstr. Caller must free returned slice.
@@ -134,8 +135,8 @@ pub fn codePoints(self: *Self, allocator: *mem.Allocator) ![]u21 {
     defer code_points.deinit();
 
     var iter = try self.codePointIter();
-    while (iter.next()) |cp| {
-        code_points.appendAssumeCapacity(cp);
+    while (iter.nextCodePoint()) |cp| {
+        code_points.appendAssumeCapacity(cp.scalar);
     }
 
     return code_points.toOwnedSlice();
@@ -151,14 +152,15 @@ pub fn codePointCount(self: *Self) !usize {
 
 /// graphemeIter returns a grapheme cluster iterator based on the bytes of this Zigstr. Each grapheme
 /// can be composed of multiple code points, so the next method returns a slice of bytes.
-pub fn graphemeIter(self: *Self) anyerror!GraphemeIterator {
-    return if (try isAsciiStr(self.bytes.items)) GraphemeIterator.newAscii(self.bytes.items) else GraphemeIterator.new(self.bytes.items);
+pub fn graphemeIter(self: *Self, allocator: *mem.Allocator) anyerror!GraphemeIterator {
+    return GraphemeIterator.init(allocator, self.bytes.items);
 }
 
 /// graphemes returns the grapheme clusters that make up this Zigstr. Caller must free returned slice.
 pub fn graphemes(self: *Self, allocator: *mem.Allocator) ![]Grapheme {
     // Cache miss, generate.
-    var giter = try self.graphemeIter();
+    var giter = try self.graphemeIter(allocator);
+    defer giter.deinit();
     var gcs = try std.ArrayList(Grapheme).initCapacity(allocator, self.bytes.items.len);
     defer gcs.deinit();
 
@@ -339,8 +341,8 @@ pub fn count(self: Self, needle: []const u8) usize {
 
 /// tokenIter returns an iterator on tokens resulting from splitting this Zigstr at every `delim`.
 /// Semantics are that of `std.mem.tokenize`.
-pub fn tokenIter(self: Self, delim: []const u8) mem.TokenIterator {
-    return mem.tokenize(self.bytes.items, delim);
+pub fn tokenIter(self: Self, delim: []const u8) mem.TokenIterator(u8) {
+    return mem.tokenize(u8, self.bytes.items, delim);
 }
 
 /// tokenize returns a slice of tokens resulting from splitting this Zigstr at every `delim`.
@@ -359,8 +361,8 @@ pub fn tokenize(self: Self, delim: []const u8, allocator: *mem.Allocator) ![][]c
 
 /// splitIter returns an iterator on substrings resulting from splitting this Zigstr at every `delim`.
 /// Semantics are that of `std.mem.split`.
-pub fn splitIter(self: Self, delim: []const u8) mem.SplitIterator {
-    return mem.split(self.bytes.items, delim);
+pub fn splitIter(self: Self, delim: []const u8) mem.SplitIterator(u8) {
+    return mem.split(u8, self.bytes.items, delim);
 }
 
 /// split returns a slice of substrings resulting from splitting this Zigstr at every `delim`.
@@ -369,7 +371,7 @@ pub fn split(self: Self, delim: []const u8, allocator: *mem.Allocator) ![][]cons
     var ss = try std.ArrayList([]const u8).initCapacity(allocator, self.bytes.items.len);
     defer ss.deinit();
 
-    var iter = mem.split(self.bytes.items, delim);
+    var iter = mem.split(u8, self.bytes.items, delim);
     while (iter.next()) |s| {
         ss.appendAssumeCapacity(s);
     }
@@ -378,7 +380,7 @@ pub fn split(self: Self, delim: []const u8, allocator: *mem.Allocator) ![][]cons
 }
 
 /// lineIter returns an iterator of lines separated by \n in this Zigstr.
-pub fn lineIter(self: Self) mem.SplitIterator {
+pub fn lineIter(self: Self) mem.SplitIterator(u8) {
     return self.splitIter("\n");
 }
 
@@ -641,62 +643,32 @@ pub fn substr(self: *Self, start: usize, end: usize) ![]const u8 {
 
 /// isLower detects if all the code points in this Zigstr are lowercase.
 pub fn isLower(self: *Self) !bool {
-    const cps = try self.codePoints(self.allocator);
-    defer self.allocator.free(cps);
-
-    return for (cps) |cp| {
-        if (!Letter.isLower(cp)) break false;
-    } else true;
+    return Ziglyph.isLowerStr(self.bytes.items);
 }
 
 /// toLower converts this Zigstr to lowercase, mutating it.
 pub fn toLower(self: *Self) !void {
-    const cps = try self.codePoints(self.allocator);
-    defer self.allocator.free(cps);
-
-    var new_al = try std.ArrayList(u8).initCapacity(self.allocator, self.bytes.items.len);
-
-    var buf: [4]u8 = undefined;
-    for (cps) |cp| {
-        const lcp = Letter.toLower(cp);
-        const len = try unicode.utf8Encode(lcp, &buf);
-        new_al.appendSliceAssumeCapacity(buf[0..len]);
-    }
-
-    self.bytes.deinit();
-    self.bytes = new_al;
+    const lower = try Ziglyph.toLowerStr(self.allocator, self.bytes.items);
+    defer self.allocator.free(lower);
+    try self.reset(lower);
 }
 
 /// isUpper detects if all the code points in this Zigstr are uppercase.
 pub fn isUpper(self: *Self) !bool {
-    const cps = try self.codePoints(self.allocator);
-    defer self.allocator.free(cps);
-
-    return for (cps) |cp| {
-        if (!Letter.isUpper(cp)) break false;
-    } else true;
+    return Ziglyph.isUpperStr(self.bytes.items);
 }
 
 /// toUpper converts this Zigstr to uppercase, mutating it.
 pub fn toUpper(self: *Self) !void {
-    const cps = try self.codePoints(self.allocator);
-    defer self.allocator.free(cps);
-
-    var new_al = try std.ArrayList(u8).initCapacity(self.allocator, self.bytes.items.len);
-
-    var buf: [4]u8 = undefined;
-    for (cps) |cp| {
-        const ucp = Letter.toUpper(cp);
-        const len = try unicode.utf8Encode(ucp, &buf);
-        new_al.appendSliceAssumeCapacity(buf[0..len]);
-    }
-
-    self.bytes.deinit();
-    self.bytes = new_al;
+    const upper = try Ziglyph.toUpperStr(self.allocator, self.bytes.items);
+    defer self.allocator.free(upper);
+    try self.reset(upper);
 }
 
 /// format implements the `std.fmt` format interface for printing types.
 pub fn format(self: Self, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+    _ = fmt;
+    _ = options;
     _ = try writer.print("{s}", .{self.bytes.items});
 }
 
@@ -838,8 +810,8 @@ test "Zigstr code points" {
     var cp_iter = try str.codePointIter();
     var want = [_]u21{ 'H', 0x00E9, 'l', 'l', 'o' };
     var i: usize = 0;
-    while (cp_iter.next()) |cp| : (i += 1) {
-        try expectEqual(want[i], cp);
+    while (cp_iter.nextCodePoint()) |cp| : (i += 1) {
+        try expectEqual(want[i], cp.scalar);
     }
 
     const cps = try str.codePoints(allocator);
@@ -855,7 +827,8 @@ test "Zigstr graphemes" {
     var str = try fromBytes(allocator, "Héllo");
     defer str.deinit();
 
-    var giter = try str.graphemeIter();
+    var giter = try str.graphemeIter(allocator);
+    defer giter.deinit();
     var want = [_][]const u8{ "H", "é", "l", "l", "o" };
     var i: usize = 0;
     while (giter.next()) |gc| : (i += 1) {

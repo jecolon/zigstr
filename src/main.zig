@@ -20,8 +20,8 @@ test "Zigstr README tests" {
     var want = [_]u21{ 'H', 0x00E9, 'l', 'l', 'o' };
 
     var i: usize = 0;
-    while (cp_iter.next()) |cp| : (i += 1) {
-        try expectEqual(want[i], cp);
+    while (cp_iter.nextCodePoint()) |cp| : (i += 1) {
+        try expectEqual(want[i], cp.scalar);
     }
 
     // Code point count.
@@ -30,10 +30,13 @@ test "Zigstr README tests" {
     // Collect all code points at once.
     const code_points = try str.codePoints(allocator);
     defer allocator.free(code_points);
-    try expectEqualSlices(u21, &want, code_points);
+    for (code_points) |cp, j| {
+        try expectEqual(want[j], cp);
+    }
 
     // Grapheme cluster iteration.
-    var giter = try str.graphemeIter();
+    var giter = try str.graphemeIter(allocator);
+    defer giter.deinit();
 
     const gc_want = [_][]const u8{ "H", "é", "l", "l", "o" };
 
