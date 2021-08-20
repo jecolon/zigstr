@@ -1,6 +1,11 @@
 # Zigstr
 A UTF-8 string type.
 
+## Ziglyph and Zig Dependency
+This library depends on the latest `Ziglyph` library, which uses the latest Zig `master` development
+version. Currently, the `Ziglyph` dependency is handled via a Git Submodule, but replacing this with 
+proper package-manager-based dependncy management is planned.
+
 ## What? No Characters?
 Zigstr tries to emphasize the clear distinction between bytes (`u8`), code points (`u21`), and
 grapheme clusters (`[]const u8`) as per the Unicode standard. Note that the term *character* is glaringly
