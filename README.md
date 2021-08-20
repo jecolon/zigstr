@@ -90,8 +90,8 @@ test "Zigstr README tests" {
     var want = [_]u21{ 'H', 0x00E9, 'l', 'l', 'o' };
 
     var i: usize = 0;
-    while (cp_iter.next()) |cp| : (i += 1) {
-        try expectEqual(want[i], cp);
+    while (cp_iter.nextCodePoint()) |cp| : (i += 1) {
+        try expectEqual(want[i], cp.scalar);
     }
 
     // Code point count.
@@ -100,10 +100,13 @@ test "Zigstr README tests" {
     // Collect all code points at once.
     const code_points = try str.codePoints(allocator);
     defer allocator.free(code_points);
-    try expectEqualSlices(u21, &want, code_points);
+    for (code_points) |cp, j| {
+        try expectEqual(want[j], cp);
+    }
 
     // Grapheme cluster iteration.
-    var giter = try str.graphemeIter();
+    var giter = try str.graphemeIter(allocator);
+    defer giter.deinit();
 
     const gc_want = [_][]const u8{ "H", "é", "l", "l", "o" };
 
@@ -327,8 +330,7 @@ test "Zigstr README tests" {
 
     // byteSlice, codePointSlice, graphemeSlice, substr
     try str.reset("H\u{0065}\u{0301}llo"); // Héllo
-    const bytes = try str.byteSlice(allocator, 1, 4);
-    defer allocator.free(bytes);
+    const bytes = try str.byteSlice(1, 4);
     try expectEqualSlices(u8, bytes, "\u{0065}\u{0301}");
 
     const cps = try str.codePointSlice(allocator, 1, 3);
@@ -340,8 +342,7 @@ test "Zigstr README tests" {
     try expect(gs[0].eql("\u{0065}\u{0301}"));
 
     // Substrings
-    var sub = try str.substr(allocator, 1, 2);
-    defer allocator.free(sub);
+    var sub = try str.substr(1, 2);
     try expectEqualStrings("\u{0065}\u{0301}", sub);
 
     try expectEqualStrings(bytes, sub);
