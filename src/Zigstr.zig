@@ -665,6 +665,13 @@ pub fn toUpper(self: *Self) !void {
     try self.reset(upper);
 }
 
+/// toTitle converts this Zigstr to titlecase, mutating it.
+pub fn toTitle(self: *Self) !void {
+    const title = try Ziglyph.toTitleStr(self.allocator, self.bytes.items);
+    defer self.allocator.free(title);
+    try self.reset(title);
+}
+
 /// format implements the `std.fmt` format interface for printing types.
 pub fn format(self: Self, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
     _ = fmt;

@@ -286,11 +286,13 @@ test "Zigstr README tests" {
     try expect(!try str.isLower());
 
     // Letter case conversion.
-    try str.reset("Héllo! 123\n");
+    try str.reset("Héllo World! 123\n");
     try str.toLower();
-    try expect(str.eql("héllo! 123\n"));
+    try expect(str.eql("héllo world! 123\n"));
     try str.toUpper();
-    try expect(str.eql("HÉLLO! 123\n"));
+    try expect(str.eql("HÉLLO WORLD! 123\n"));
+    try str.toTitle();
+    try expect(str.eql("Héllo World! 123\n"));
 
     // Parsing content.
     try str.reset("123");
