@@ -1,11 +1,6 @@
 # Zigstr
 A UTF-8 string type.
 
-## Ziglyph and Zig Dependency
-This library depends on the latest `Ziglyph` library, which uses the latest Zig `master` development
-version. Currently, the `Ziglyph` dependency is handled via a Git Submodule, but replacing this with 
-proper package-manager-based dependncy management is planned.
-
 ## What? No Characters?
 Zigstr tries to emphasize the clear distinction between bytes (`u8`), code points (`u21`), and
 grapheme clusters (`[]const u8`) as per the Unicode standard. Note that the term *character* is glaringly
@@ -46,13 +41,10 @@ different alignments, operations like `padLeft`, `padRight`, and `center` are pa
 struct and not Zigstr.
 
 ## Integrating Zigstr in your Project
-In a `libs` subdirectory under the root of your project, clone this repository, and update the `Ziglyph`
-submodule via:
+In a `libs` subdirectory under the root of your project, clone this repository.
 
 ```sh
 $ git clone https://github.com/jecolon/zigstr.git
-$ cd zigstr
-$ git submodule update --init src/ziglyph
 ```
 
 Now in your build.zig, you can add:
