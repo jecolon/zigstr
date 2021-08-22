@@ -3,12 +3,12 @@ const mem = std.mem;
 const unicode = std.unicode;
 
 const ascii = @import("ascii.zig");
-const Letter = @import("ziglyph/src/Ziglyph.zig").Letter;
-const CodePointIterator = @import("ziglyph/src/Ziglyph.zig").CodePointIterator;
-const Grapheme = @import("ziglyph/src/Ziglyph.zig").Grapheme;
+const Ziglyph = @import("ziglyph");
+const Letter = Ziglyph.Letter;
+const CodePointIterator = Ziglyph.CodePointIterator;
+const Grapheme = Ziglyph.Grapheme;
 const GraphemeIterator = Grapheme.GraphemeIterator;
-const Props = @import("ziglyph/src/Ziglyph.zig").PropList;
-const Ziglyph = @import("ziglyph/src/Ziglyph.zig");
+const Props = Ziglyph.PropList;
 
 const Self = @This();
 
