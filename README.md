@@ -64,17 +64,17 @@ deps.addAllTo(exe);
 Now in the code, you can import `Zigstr` like this:
 
 ```zig
-const Zigstr = @import("Zigstr");
+const zigstr = @import("zigstr");
 
 ```
 
 ## Usage Examples
 ```zig
-const Zigstr = @import("Zigstr");
+const zigstr = @import("zigstr");
 
 test "Zigstr README tests" {
     var allocator = std.testing.allocator;
-    var str = try Zigstr.fromBytes(std.testing.allocator, "Héllo");
+    var str = try zigstr.fromBytes(std.testing.allocator, "Héllo");
     defer str.deinit();
 
     // Byte count.
