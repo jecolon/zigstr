@@ -41,34 +41,32 @@ different alignments, operations like `padLeft`, `padRight`, and `center` are pa
 struct and not Zigstr.
 
 ## Integrating Zigstr in your Project
-In a `libs` subdirectory under the root of your project, clone this repository.
+Zigstr uses [Zigmod](https://github.com/nektro/zigmod) for dependency management. It's the easiest way
+to include this library in your project. Once you have `Zigmod`, you just have to run:
 
 ```sh
-$ git clone https://github.com/jecolon/zigstr.git
+$ zigmod aq add 1/jecolon/zigstr
+$ zigmod fetch
 ```
 
-Now in your build.zig, you can add:
+Now in your `build.zig` you add this import:
 
-```zig
-exe.addPackagePath("Zigstr", "libs/zigstr/src/Zigstr.zig");
+```
+const deps = @import("deps.zig");
 ```
 
-to the `exe` section for the executable where you wish to have Zigstr available. Now in the code, you
-can import `Zigstr` like this:
+In the `exe` section for the executable where you wish to have Zigstr available, add:
+
+```
+deps.addAllTo(exe);
+```
+
+Now in the code, you can import `Zigstr` like this:
 
 ```zig
 const Zigstr = @import("Zigstr");
 
 ```
-
-Finally, you can build the project with:
-
-```sh
-$ zig build
-```
-
-Note that to build in release modes, either specify them in the `build.zig` file or on the command line
-via the `-Drelease-fast=true`, `-Drelease-small=true`, `-Drelease-safe=true` options to `zig build`.
 
 ## Usage Examples
 ```zig
