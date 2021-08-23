@@ -6,4 +6,3 @@ description: A UTF-8 string type for Zig.
 dependencies:
 - src: git https://github.com/jecolon/ziglyph.git
 dev_dependencies:
-- src: git https://github.com/jecolon/ziglyph.git

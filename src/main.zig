@@ -5,11 +5,11 @@ const expectEqual = std.testing.expectEqual;
 const expectEqualStrings = std.testing.expectEqualStrings;
 const expectEqualSlices = std.testing.expectEqualSlices;
 
-const Zigstr = @import("Zigstr.zig");
+const zigstr = @import("zigstr");
 
 test "Zigstr README tests" {
     var allocator = std.testing.allocator;
-    var str = try Zigstr.fromBytes(std.testing.allocator, "Héllo");
+    var str = try zigstr.fromBytes(std.testing.allocator, "Héllo");
     defer str.deinit();
 
     // Byte count.
@@ -233,13 +233,13 @@ test "Zigstr README tests" {
     // You can also construct a Zigstr from coce points.
     const cp_array = [_]u21{ 0x68, 0x65, 0x6C, 0x6C, 0x6F }; // "hello"
     str.deinit();
-    str = try Zigstr.fromCodePoints(allocator, &cp_array);
+    str = try zigstr.fromCodePoints(allocator, &cp_array);
     try expect(str.eql("hello"));
     try expectEqual(str.codePointCount(), 5);
 
     // Also create a Zigstr from a slice of strings.
     str.deinit();
-    str = try Zigstr.fromJoined(std.testing.allocator, &[_][]const u8{ "Hello", "World" }, " ");
+    str = try zigstr.fromJoined(std.testing.allocator, &[_][]const u8{ "Hello", "World" }, " ");
     try expect(str.eql("Hello World"));
 
     // Chomp line breaks.
