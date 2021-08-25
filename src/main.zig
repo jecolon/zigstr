@@ -16,7 +16,7 @@ test "Zigstr README tests" {
     try expectEqual(@as(usize, 6), str.byteCount());
 
     // Code point iteration.
-    var cp_iter = try str.codePointIter();
+    var cp_iter = str.codePointIter();
     var want = [_]u21{ 'H', 0x00E9, 'l', 'l', 'o' };
 
     var i: usize = 0;

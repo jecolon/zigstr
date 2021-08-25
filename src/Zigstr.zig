@@ -125,7 +125,7 @@ pub fn byteCount(self: Self) usize {
 }
 
 /// codePointIter returns a code point iterator based on the bytes of this Zigstr.
-pub fn codePointIter(self: Self) !CodePointIterator {
+pub fn codePointIter(self: Self) CodePointIterator {
     return CodePointIterator{ .bytes = self.bytes.items };
 }
 
@@ -134,7 +134,7 @@ pub fn codePoints(self: *Self, allocator: *mem.Allocator) ![]u21 {
     var code_points = try std.ArrayList(u21).initCapacity(allocator, self.bytes.items.len);
     defer code_points.deinit();
 
-    var iter = try self.codePointIter();
+    var iter = self.codePointIter();
     while (iter.nextCodePoint()) |cp| {
         code_points.appendAssumeCapacity(cp.scalar);
     }
