@@ -5,8 +5,8 @@ A UTF-8 string type.
 Zigstr tries to emphasize the clear distinction between bytes (`u8`), code points (`u21`), and
 grapheme clusters (`[]const u8`) as per the Unicode standard. Note that the term *character* is glaringly
 missing here, as it tends to produce more confusion than clarity, and in fact Unicode has no concrete 
-*character* concept, only abstract characters are broadly mentioned. The closes concept resembling
-a human-perceivable *character in Unicode* is the Grapheme Cluster, represented here as the `Grapheme` 
+*character* concept, only abstract characters are broadly mentioned. The closest concept resembling
+a human-perceivable *character* in Unicode is the Grapheme Cluster, represented here as the `Grapheme` 
 type returned from each call to the `next` method on a `GraphemeIterator` (see sample code below).
 
 ## Ownership
@@ -27,18 +27,10 @@ var str = try Zigstr.fromOwnedBytes(allocator, slice);
 defer str.deinit(); // owned bytes will be freed.
 ```
 
-## Comparison and Sorting (Collation)
-Given the large amounts of data required for comparisons and sorting of Unicode strings, these operations
-are not included in the `Zigstr` struct to keep it light and fast. Comparison and sorting of strings
-can be found in the `Normalizer` and `Collator` structs of the [Ziglyph](https://github.com/jecolon/ziglyph)
-library.
-
-## Display Width
-The `Width` struct of the [Ziglyph](https://github.com/jecolon/ziglyph) library contains methods to 
-calculate the fixed-width cells a given code point or string occupies in a fixed-width context such
-as a terminal emulator. Since these calculations are required for methods that *pad* the string in 
-different alignments, operations like `padLeft`, `padRight`, and `center` are part of the `Width` 
-struct and not Zigstr.
+## String Comparison, Sorting (Collation), Normalization, Display With, and More
+Given the large amounts of data required for many Unicode string operations, these operations are not 
+included in the `Zigstr` struct to keep it light and fast. For the myriad Unicode text processing
+operations, check out the [Ziglyph](https://github.com/jecolon/ziglyph) library.
 
 ## Integrating Zigstr in your Project
 ### Via Zigmod
