@@ -44,13 +44,13 @@ $ zigmod fetch
 
 Now in your `build.zig` you add this import:
 
-```
+```zig
 const deps = @import("deps.zig");
 ```
 
 In the `exe` section for the executable where you wish to have Zigstr available, add:
 
-```
+```zig
 deps.addAllTo(exe);
 ```
 
