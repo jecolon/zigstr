@@ -135,7 +135,7 @@ pub fn codePoints(self: *Self, allocator: *mem.Allocator) ![]u21 {
     defer code_points.deinit();
 
     var iter = self.codePointIter();
-    while (iter.nextCodePoint()) |cp| {
+    while (iter.next()) |cp| {
         code_points.appendAssumeCapacity(cp.scalar);
     }
 

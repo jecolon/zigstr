@@ -20,7 +20,7 @@ test "Zigstr README tests" {
     var want = [_]u21{ 'H', 0x00E9, 'l', 'l', 'o' };
 
     var i: usize = 0;
-    while (cp_iter.nextCodePoint()) |cp| : (i += 1) {
+    while (cp_iter.next()) |cp| : (i += 1) {
         try expectEqual(want[i], cp.scalar);
     }
 
