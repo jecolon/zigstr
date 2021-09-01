@@ -291,8 +291,9 @@ test "Zigstr README tests" {
     try expect(str.eql("héllo world! 123\n"));
     try str.toUpper();
     try expect(str.eql("HÉLLO WORLD! 123\n"));
+    try str.reset("tHe (mOviE) 2112\n");
     try str.toTitle();
-    try expect(str.eql("Héllo World! 123\n"));
+    try expect(str.eql("The (Movie) 2112\n"));
 
     // Parsing content.
     try str.reset("123");

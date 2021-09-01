@@ -33,7 +33,6 @@ included in the `Zigstr` struct to keep it light and fast. For the myriad Unicod
 operations, check out the [Ziglyph](https://github.com/jecolon/ziglyph) library.
 
 ## Integrating Zigstr in your Project
-### Via Zigmod
 Zigstr uses [Zigmod](https://github.com/nektro/zigmod) for dependency management. It's the easiest way
 to include this library in your project. Once you have `Zigmod`, you just have to run:
 
@@ -52,19 +51,6 @@ In the `exe` section for the executable where you wish to have Zigstr available,
 
 ```zig
 deps.addAllTo(exe);
-```
-
-### Manually via Git
-If you're not using Zigmod, you can manually add Zigstr to your project via Git.
-In a `libs` subdirectory under the root of your project, clone this repository via
-
-```sh
-$  git clone https://github.com/jecolon/zigstr.git
-```
-Now in your build.zig, you can add:
-
-```zig
-exe.addPackagePath("zigstr", "libs/zigstr/src/Zigstr.zig");
 ```
 
 Now in the code, you can import `Zigstr` like this:
