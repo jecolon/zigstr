@@ -814,10 +814,10 @@ test "Zigstr code points" {
     var str = try fromBytes(allocator, "Héllo");
     defer str.deinit();
 
-    var cp_iter = try str.codePointIter();
+    var cp_iter = str.codePointIter();
     var want = [_]u21{ 'H', 0x00E9, 'l', 'l', 'o' };
     var i: usize = 0;
-    while (cp_iter.nextCodePoint()) |cp| : (i += 1) {
+    while (cp_iter.next()) |cp| : (i += 1) {
         try expectEqual(want[i], cp.scalar);
     }
 

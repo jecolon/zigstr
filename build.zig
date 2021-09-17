@@ -15,6 +15,11 @@ pub fn build(b: *std.build.Builder) void {
     main_tests.setBuildMode(mode);
     deps.addAllTo(main_tests);
 
+    var zs_tests = b.addTest("src/Zigstr.zig");
+    zs_tests.setBuildMode(mode);
+    deps.addAllTo(zs_tests);
+
     const test_step = b.step("test", "Run library tests");
     test_step.dependOn(&main_tests.step);
+    test_step.dependOn(&zs_tests.step);
 }
