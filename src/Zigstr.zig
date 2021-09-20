@@ -3,12 +3,11 @@ const mem = std.mem;
 const unicode = std.unicode;
 
 const ascii = @import("ascii.zig");
-const Ziglyph = @import("ziglyph");
-const Letter = Ziglyph.Letter;
-const CodePointIterator = Ziglyph.CodePointIterator;
-const Grapheme = Ziglyph.Grapheme;
+const ziglyph = @import("ziglyph");
+const CodePointIterator = ziglyph.CodePointIterator;
+const Grapheme = ziglyph.Grapheme;
 const GraphemeIterator = Grapheme.GraphemeIterator;
-const Props = Ziglyph.PropList;
+const prop_list = ziglyph.prop_list;
 
 const Self = @This();
 
@@ -510,7 +509,7 @@ pub fn isBlank(self: *Self) !bool {
     defer self.allocator.free(cps);
 
     return for (cps) |cp| {
-        if (!Props.isWhiteSpace(cp)) break false;
+        if (!prop_list.isWhiteSpace(cp)) break false;
     } else true;
 }
 
@@ -643,31 +642,31 @@ pub fn substr(self: *Self, start: usize, end: usize) ![]const u8 {
 
 /// isLower detects if all the code points in this Zigstr are lowercase.
 pub fn isLower(self: *Self) !bool {
-    return Ziglyph.isLowerStr(self.bytes.items);
+    return ziglyph.isLowerStr(self.bytes.items);
 }
 
 /// toLower converts this Zigstr to lowercase, mutating it.
 pub fn toLower(self: *Self) !void {
-    const lower = try Ziglyph.toLowerStr(self.allocator, self.bytes.items);
+    const lower = try ziglyph.toLowerStr(self.allocator, self.bytes.items);
     defer self.allocator.free(lower);
     try self.reset(lower);
 }
 
 /// isUpper detects if all the code points in this Zigstr are uppercase.
 pub fn isUpper(self: *Self) !bool {
-    return Ziglyph.isUpperStr(self.bytes.items);
+    return ziglyph.isUpperStr(self.bytes.items);
 }
 
 /// toUpper converts this Zigstr to uppercase, mutating it.
 pub fn toUpper(self: *Self) !void {
-    const upper = try Ziglyph.toUpperStr(self.allocator, self.bytes.items);
+    const upper = try ziglyph.toUpperStr(self.allocator, self.bytes.items);
     defer self.allocator.free(upper);
     try self.reset(upper);
 }
 
 /// toTitle converts this Zigstr to titlecase, mutating it.
 pub fn toTitle(self: *Self) !void {
-    const title = try Ziglyph.toTitleStr(self.allocator, self.bytes.items);
+    const title = try ziglyph.toTitleStr(self.allocator, self.bytes.items);
     defer self.allocator.free(title);
     try self.reset(title);
 }
