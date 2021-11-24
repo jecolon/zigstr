@@ -77,7 +77,7 @@ test "Zigstr README tests" {
     var want = [_]u21{ 'H', 0x00E9, 'l', 'l', 'o' };
 
     var i: usize = 0;
-    while (cp_iter.nextCodePoint()) |cp| : (i += 1) {
+    while (cp_iter.next()) |cp| : (i += 1) {
         try expectEqual(want[i], cp.scalar);
     }
 
@@ -290,13 +290,13 @@ test "Zigstr README tests" {
     // You can also construct a Zigstr from coce points.
     const cp_array = [_]u21{ 0x68, 0x65, 0x6C, 0x6C, 0x6F }; // "hello"
     str.deinit();
-    str = try Zigstr.fromCodePoints(allocator, &cp_array);
+    str = try zigstr.fromCodePoints(allocator, &cp_array);
     try expect(str.eql("hello"));
     try expectEqual(str.codePointCount(), 5);
 
     // Also create a Zigstr from a slice of strings.
     str.deinit();
-    str = try Zigstr.fromJoined(std.testing.allocator, &[_][]const u8{ "Hello", "World" }, " ");
+    str = try zigstr.fromJoined(std.testing.allocator, &[_][]const u8{ "Hello", "World" }, " ");
     try expect(str.eql("Hello World"));
 
     // Chomp line breaks.
@@ -348,8 +348,9 @@ test "Zigstr README tests" {
     try expect(str.eql("héllo world! 123\n"));
     try str.toUpper();
     try expect(str.eql("HÉLLO WORLD! 123\n"));
+    try str.reset("tHe (mOviE) 2112\n");
     try str.toTitle();
-    try expect(str.eql("Héllo World! 123\n"));
+    try expect(str.eql("The (Movie) 2112\n"));
 
     // Parsing content.
     try str.reset("123");
