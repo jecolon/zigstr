@@ -319,18 +319,35 @@ test "Zigstr insertions" {
 }
 
 /// indexOf returns the index of `needle` in this Zigstr or null if not found.
-pub fn indexOf(self: Self, needle: []const u8) ?usize {
-    return mem.indexOf(u8, self.bytes.items, needle);
+pub fn indexOf(self: Self, needle: []const u8) !?usize {
+    var iter = try GraphemeIterator.init(self.allocator, self.bytes.items);
+    defer iter.deinit();
+    var i: usize = 0;
+
+    while (iter.next()) |grapheme| : (i += 1) {
+        if (std.mem.startsWith(u8, grapheme.bytes, needle)) return i;
+    }
+
+    return null;
 }
 
 /// containes ceonvenience method to check if `str` is a substring of this Zigstr.
-pub fn contains(self: Self, str: []const u8) bool {
-    return self.indexOf(str) != null;
+pub fn contains(self: Self, str: []const u8) !bool {
+    return (try self.indexOf(str)) != null;
 }
 
 /// lastIndexOf returns the index of `needle` in this Zigstr starting from the end, or null if not found.
-pub fn lastIndexOf(self: Self, needle: []const u8) ?usize {
-    return mem.lastIndexOf(u8, self.bytes.items, needle);
+pub fn lastIndexOf(self: Self, needle: []const u8) !?usize {
+    var iter = try GraphemeIterator.init(self.allocator, self.bytes.items);
+    defer iter.deinit();
+    var i: usize = 0;
+    var index: ?usize = null;
+
+    while (iter.next()) |grapheme| : (i += 1) {
+        if (std.mem.startsWith(u8, grapheme.bytes, needle)) index = i;
+    }
+
+    return index;
 }
 
 /// count returns the number of `needle`s in this Zigstr.
@@ -897,18 +914,18 @@ test "Zigstr indexOf" {
     var str = try fromBytes(std.testing.allocator, "Hello");
     defer str.deinit();
 
-    try expectEqual(str.indexOf("l"), 2);
-    try expectEqual(str.indexOf("z"), null);
-    try expect(str.contains("l"));
-    try expect(!str.contains("z"));
+    try expectEqual(try str.indexOf("l"), 2);
+    try expectEqual(try str.indexOf("z"), null);
+    try expect(try str.contains("l"));
+    try expect(!try str.contains("z"));
 }
 
 test "Zigstr lastIndexOf" {
     var str = try fromBytes(std.testing.allocator, "Hello");
     defer str.deinit();
 
-    try expectEqual(str.lastIndexOf("l"), 3);
-    try expectEqual(str.lastIndexOf("z"), null);
+    try expectEqual(try str.lastIndexOf("l"), 3);
+    try expectEqual(try str.lastIndexOf("z"), null);
 }
 
 test "Zigstr count" {

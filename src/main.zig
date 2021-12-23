@@ -101,12 +101,13 @@ test "Zigstr README tests" {
     try expect(str.eql("Hello"));
 
     // indexOf / contains / lastIndexOf
-    try expectEqual(str.indexOf("l"), 2);
-    try expectEqual(str.indexOf("z"), null);
-    try expect(str.contains("l"));
-    try expect(!str.contains("z"));
-    try expectEqual(str.lastIndexOf("l"), 3);
-    try expectEqual(str.lastIndexOf("z"), null);
+    try str.reset("H\u{65}\u{301}llo"); // Héllo
+    try expectEqual(try str.indexOf("l"), 2);
+    try expectEqual(try str.indexOf("z"), null);
+    try expect(try str.contains("l"));
+    try expect(!try str.contains("z"));
+    try expectEqual(try str.lastIndexOf("l"), 3);
+    try expectEqual(try str.lastIndexOf("z"), null);
 
     // count
     try expectEqual(str.count("l"), 2);
