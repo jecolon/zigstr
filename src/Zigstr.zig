@@ -11,11 +11,11 @@ const prop_list = ziglyph.prop_list;
 
 const Self = @This();
 
-allocator: *mem.Allocator,
+allocator: mem.Allocator,
 bytes: std.ArrayList(u8),
 
 /// fromBytes returns a new Zigstr from the byte slice `str`, which will *not* be freed on `deinit`.
-pub fn fromBytes(allocator: *mem.Allocator, str: []const u8) !Self {
+pub fn fromBytes(allocator: mem.Allocator, str: []const u8) !Self {
     return Self{
         .allocator = allocator,
         .bytes = blk: {
@@ -27,7 +27,7 @@ pub fn fromBytes(allocator: *mem.Allocator, str: []const u8) !Self {
 }
 
 /// fromOwnedBytes returns a new Zigstr from the owned byte slice `str`, which will be freed on `deinit`.
-pub fn fromOwnedBytes(allocator: *mem.Allocator, str: []u8) !Self {
+pub fn fromOwnedBytes(allocator: mem.Allocator, str: []u8) !Self {
     return Self{
         .allocator = allocator,
         .bytes = std.ArrayList(u8).fromOwnedSlice(allocator, str),
@@ -35,7 +35,7 @@ pub fn fromOwnedBytes(allocator: *mem.Allocator, str: []u8) !Self {
 }
 
 /// fromCodePoints returns a new Zigstr from `code points`.
-pub fn fromCodePoints(allocator: *mem.Allocator, code_points: []const u21) !Self {
+pub fn fromCodePoints(allocator: mem.Allocator, code_points: []const u21) !Self {
     const ascii_only = blk_ascii: {
         break :blk_ascii for (code_points) |cp| {
             if (cp > 127) break false;
@@ -80,7 +80,7 @@ test "Zigstr from code points" {
 }
 
 /// fromJoined returns a new Zigstr from the concatenation of strings in `slice` with `sep` separator.
-pub fn fromJoined(allocator: *mem.Allocator, slice: []const []const u8, sep: []const u8) !Self {
+pub fn fromJoined(allocator: mem.Allocator, slice: []const []const u8, sep: []const u8) !Self {
     return fromOwnedBytes(allocator, try mem.join(allocator, sep, slice));
 }
 
@@ -129,7 +129,7 @@ pub fn codePointIter(self: Self) CodePointIterator {
 }
 
 /// codePoints returns the code points that make up this Zigstr. Caller must free returned slice.
-pub fn codePoints(self: *Self, allocator: *mem.Allocator) ![]u21 {
+pub fn codePoints(self: *Self, allocator: mem.Allocator) ![]u21 {
     var code_points = try std.ArrayList(u21).initCapacity(allocator, self.bytes.items.len);
     defer code_points.deinit();
 
@@ -151,12 +151,12 @@ pub fn codePointCount(self: *Self) !usize {
 
 /// graphemeIter returns a grapheme cluster iterator based on the bytes of this Zigstr. Each grapheme
 /// can be composed of multiple code points, so the next method returns a slice of bytes.
-pub fn graphemeIter(self: *Self, allocator: *mem.Allocator) anyerror!GraphemeIterator {
+pub fn graphemeIter(self: *Self, allocator: mem.Allocator) anyerror!GraphemeIterator {
     return GraphemeIterator.init(allocator, self.bytes.items);
 }
 
 /// graphemes returns the grapheme clusters that make up this Zigstr. Caller must free returned slice.
-pub fn graphemes(self: *Self, allocator: *mem.Allocator) ![]Grapheme {
+pub fn graphemes(self: *Self, allocator: mem.Allocator) ![]Grapheme {
     // Cache miss, generate.
     var giter = try self.graphemeIter(allocator);
     defer giter.deinit();
@@ -179,7 +179,7 @@ pub fn graphemeCount(self: *Self) !usize {
 }
 
 /// copy a Zigstr to a new Zigstr. Don't forget to to `deinit` the returned Zigstr.
-pub fn copy(self: Self, allocator: *mem.Allocator) !Self {
+pub fn copy(self: Self, allocator: mem.Allocator) !Self {
     return Self{
         .allocator = allocator,
         .bytes = b_blk: {
@@ -346,7 +346,7 @@ pub fn tokenIter(self: Self, delim: []const u8) mem.TokenIterator(u8) {
 
 /// tokenize returns a slice of tokens resulting from splitting this Zigstr at every `delim`.
 /// Caller must free returned slice.
-pub fn tokenize(self: Self, delim: []const u8, allocator: *mem.Allocator) ![][]const u8 {
+pub fn tokenize(self: Self, delim: []const u8, allocator: mem.Allocator) ![][]const u8 {
     var ts = try std.ArrayList([]const u8).initCapacity(allocator, self.bytes.items.len);
     defer ts.deinit();
 
@@ -366,7 +366,7 @@ pub fn splitIter(self: Self, delim: []const u8) mem.SplitIterator(u8) {
 
 /// split returns a slice of substrings resulting from splitting this Zigstr at every `delim`.
 /// Caller must free returned slice.
-pub fn split(self: Self, delim: []const u8, allocator: *mem.Allocator) ![][]const u8 {
+pub fn split(self: Self, delim: []const u8, allocator: mem.Allocator) ![][]const u8 {
     var ss = try std.ArrayList([]const u8).initCapacity(allocator, self.bytes.items.len);
     defer ss.deinit();
 
@@ -385,7 +385,7 @@ pub fn lineIter(self: Self) mem.SplitIterator(u8) {
 
 /// lines returns a slice of substrings resulting from splitting this Zigstr at every \n.
 /// Caller must free returned slice.
-pub fn lines(self: Self, allocator: *mem.Allocator) ![][]const u8 {
+pub fn lines(self: Self, allocator: mem.Allocator) ![][]const u8 {
     return self.split("\n", allocator);
 }
 
@@ -584,7 +584,7 @@ pub fn byteSlice(self: Self, start: usize, end: usize) ![]const u8 {
 
 /// codePointSlice returnes the code points from this Zigstr in the specified range from `start` to `end` - 1.
 /// Caller must free returned slice.
-pub fn codePointSlice(self: *Self, allocator: *mem.Allocator, start: usize, end: usize) ![]u21 {
+pub fn codePointSlice(self: *Self, allocator: mem.Allocator, start: usize, end: usize) ![]u21 {
     if (end <= start) return error.InvalidRange;
 
     const cps = try self.codePoints(allocator);
@@ -604,7 +604,7 @@ pub fn codePointSlice(self: *Self, allocator: *mem.Allocator, start: usize, end:
 
 /// graphemeSlice returnes the grapheme clusters from this Zigstr in the specified range from `start` to `end` - 1.
 /// Caller must free returned slice.
-pub fn graphemeSlice(self: *Self, allocator: *mem.Allocator, start: usize, end: usize) ![]Grapheme {
+pub fn graphemeSlice(self: *Self, allocator: mem.Allocator, start: usize, end: usize) ![]Grapheme {
     if (end <= start) return error.InvalidRange;
 
     const gcs = try self.graphemes(allocator);
