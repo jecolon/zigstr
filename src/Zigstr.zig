@@ -151,15 +151,14 @@ pub fn codePointCount(self: *Self) !usize {
 
 /// graphemeIter returns a grapheme cluster iterator based on the bytes of this Zigstr. Each grapheme
 /// can be composed of multiple code points, so the next method returns a slice of bytes.
-pub fn graphemeIter(self: *Self, allocator: mem.Allocator) anyerror!GraphemeIterator {
-    return GraphemeIterator.init(allocator, self.bytes.items);
+pub fn graphemeIter(self: *Self) anyerror!GraphemeIterator {
+    return GraphemeIterator.init(self.bytes.items);
 }
 
 /// graphemes returns the grapheme clusters that make up this Zigstr. Caller must free returned slice.
 pub fn graphemes(self: *Self, allocator: mem.Allocator) ![]Grapheme {
     // Cache miss, generate.
-    var giter = try self.graphemeIter(allocator);
-    defer giter.deinit();
+    var giter = try self.graphemeIter();
     var gcs = try std.ArrayList(Grapheme).initCapacity(allocator, self.bytes.items.len);
     defer gcs.deinit();
 
@@ -320,8 +319,7 @@ test "Zigstr insertions" {
 
 /// indexOf returns the index of `needle` in this Zigstr or null if not found.
 pub fn indexOf(self: Self, needle: []const u8) !?usize {
-    var iter = try GraphemeIterator.init(self.allocator, self.bytes.items);
-    defer iter.deinit();
+    var iter = try GraphemeIterator.init(self.bytes.items);
     var i: usize = 0;
 
     while (iter.next()) |grapheme| : (i += 1) {
@@ -338,8 +336,7 @@ pub fn contains(self: Self, str: []const u8) !bool {
 
 /// lastIndexOf returns the index of `needle` in this Zigstr starting from the end, or null if not found.
 pub fn lastIndexOf(self: Self, needle: []const u8) !?usize {
-    var iter = try GraphemeIterator.init(self.allocator, self.bytes.items);
-    defer iter.deinit();
+    var iter = try GraphemeIterator.init(self.bytes.items);
     var i: usize = 0;
     var index: ?usize = null;
 
@@ -850,8 +847,7 @@ test "Zigstr graphemes" {
     var str = try fromBytes(allocator, "Héllo");
     defer str.deinit();
 
-    var giter = try str.graphemeIter(allocator);
-    defer giter.deinit();
+    var giter = try str.graphemeIter();
     var want = [_][]const u8{ "H", "é", "l", "l", "o" };
     var i: usize = 0;
     while (giter.next()) |gc| : (i += 1) {

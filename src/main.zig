@@ -35,9 +35,7 @@ test "Zigstr README tests" {
     }
 
     // Grapheme cluster iteration.
-    var giter = try str.graphemeIter(allocator);
-    defer giter.deinit();
-
+    var giter = try str.graphemeIter();
     const gc_want = [_][]const u8{ "H", "é", "l", "l", "o" };
 
     i = 0;
