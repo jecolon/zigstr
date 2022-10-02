@@ -319,11 +319,12 @@ test "Zigstr insertions" {
 
 /// indexOf returns the index of `needle` in this Zigstr or null if not found.
 pub fn indexOf(self: Self, needle: []const u8) !?usize {
-    var iter = try GraphemeIterator.init(self.bytes.items);
-    var i: usize = 0;
-
-    while (iter.next()) |grapheme| : (i += 1) {
-        if (std.mem.startsWith(u8, grapheme.bytes, needle)) return i;
+    if (needle.len > 0) {
+        if (mem.indexOf(u8, self.bytes.items, needle)) |end| {
+            var i: usize = 0;
+            var iter = CodePointIterator{ .bytes = self.bytes.items[0..end] };
+            while (iter.next()) |_| : (i += 1) {} else return i;
+        }
     }
 
     return null;
@@ -336,15 +337,15 @@ pub fn contains(self: Self, str: []const u8) !bool {
 
 /// lastIndexOf returns the index of `needle` in this Zigstr starting from the end, or null if not found.
 pub fn lastIndexOf(self: Self, needle: []const u8) !?usize {
-    var iter = try GraphemeIterator.init(self.bytes.items);
-    var i: usize = 0;
-    var index: ?usize = null;
-
-    while (iter.next()) |grapheme| : (i += 1) {
-        if (std.mem.startsWith(u8, grapheme.bytes, needle)) index = i;
+    if (needle.len > 0) {
+        if (mem.lastIndexOf(u8, self.bytes.items, needle)) |end| {
+            var i: usize = 0;
+            var iter = CodePointIterator{ .bytes = self.bytes.items[0..end] };
+            while (iter.next()) |_| : (i += 1) {} else return i;
+        }
     }
 
-    return index;
+    return null;
 }
 
 /// count returns the number of `needle`s in this Zigstr.
@@ -907,21 +908,29 @@ test "Zigstr trim" {
 }
 
 test "Zigstr indexOf" {
-    var str = try fromBytes(std.testing.allocator, "Hello");
+    var str = try fromBytes(std.testing.allocator, "😊 Héllo world");
     defer str.deinit();
 
-    try expectEqual(try str.indexOf("l"), 2);
+    try expectEqual(try str.indexOf("😊"), 0);
+    try expectEqual(try str.indexOf("l"), 4);
+    try expectEqual(try str.indexOf("lo"), 5);
+    try expectEqual(try str.indexOf("orld"), 9);
     try expectEqual(try str.indexOf("z"), null);
+    try expectEqual(try str.indexOf(""), null);
     try expect(try str.contains("l"));
     try expect(!try str.contains("z"));
 }
 
 test "Zigstr lastIndexOf" {
-    var str = try fromBytes(std.testing.allocator, "Hello");
+    var str = try fromBytes(std.testing.allocator, "Héllo lol 😊");
     defer str.deinit();
 
-    try expectEqual(try str.lastIndexOf("l"), 3);
+    try expectEqual(try str.lastIndexOf("l"), 8);
+    try expectEqual(try str.lastIndexOf("lo"), 6);
+    try expectEqual(try str.lastIndexOf(" 😊"), 9);
+    try expectEqual(try str.lastIndexOf("😊"), 10);
     try expectEqual(try str.lastIndexOf("z"), null);
+    try expectEqual(try str.lastIndexOf(""), null);
 }
 
 test "Zigstr count" {
