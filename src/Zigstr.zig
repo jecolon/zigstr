@@ -322,7 +322,7 @@ pub fn indexOf(self: Self, needle: []const u8) !?usize {
     if (needle.len > 0) {
         if (mem.indexOf(u8, self.bytes.items, needle)) |end| {
             var i: usize = 0;
-            var iter = CodePointIterator{ .bytes = self.bytes.items[0..end] };
+            var iter = try GraphemeIterator.init(self.bytes.items[0..end]);
             while (iter.next()) |_| : (i += 1) {} else return i;
         }
     }
@@ -340,7 +340,7 @@ pub fn lastIndexOf(self: Self, needle: []const u8) !?usize {
     if (needle.len > 0) {
         if (mem.lastIndexOf(u8, self.bytes.items, needle)) |end| {
             var i: usize = 0;
-            var iter = CodePointIterator{ .bytes = self.bytes.items[0..end] };
+            var iter = try GraphemeIterator.init(self.bytes.items[0..end]);
             while (iter.next()) |_| : (i += 1) {} else return i;
         }
     }
