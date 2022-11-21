@@ -34,8 +34,17 @@ $ git clone --recurse-submodules https://github.com/jecolon/zigstr
 Now in your `build.zig` you can add to your `lib` or `exe` etc.:
 
 ```zig
-exe.addPackagePath("Zigstr", "libs/zigstr/src/Zigstr.zig");
+const cow_list = std.build.Pkg{ .name = "cow_list", .source = .{ .path = "libs/zigstr/libs/cow_list/src/main.zig" } };
+const ziglyph = std.build.Pkg{ .name = "ziglyph", .source = .{ .path = "libs/zigstr/libs/ziglyph/src/ziglyph.zig" } };
+const Zigstr = std.build.Pkg{
+    .name = "Zigstr",
+    .source = .{ .path = "libs/zigstr/src/Zigstr.zig" },
+    .dependencies = &[_]std.build.Pkg{ cow_list, ziglyph },
+};
+exe.addPackage(Zigstr);
 ```
+
+Note the above `build.zig` complexity will be eliminated once Zig has an official package manager.
 
 ## Usage Examples
 ```zig
