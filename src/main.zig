@@ -5,11 +5,11 @@ const expectEqual = std.testing.expectEqual;
 const expectEqualStrings = std.testing.expectEqualStrings;
 const expectEqualSlices = std.testing.expectEqualSlices;
 
-const zigstr = @import("zigstr");
+const Zigstr = @import("Zigstr.zig");
 
 test "Zigstr README tests" {
     var allocator = std.testing.allocator;
-    var str = try zigstr.fromBytes(std.testing.allocator, "Héllo");
+    var str = try Zigstr.fromConstBytes(std.testing.allocator, "Héllo");
     defer str.deinit();
 
     // Byte count.
@@ -66,7 +66,7 @@ test "Zigstr README tests" {
     // Copy
     var str2 = try str.copy(allocator);
     defer str2.deinit();
-    try expect(str.eql(str2.bytes.items));
+    try expect(str.eql(str2));
     try expect(str2.eql("Héllo"));
     try expect(str.sameAs(str2));
 
@@ -184,7 +184,7 @@ test "Zigstr README tests" {
     // Append a code point or many.
     try str.reset("Hell");
     try str.append('o');
-    try expectEqual(@as(usize, 5), str.bytes.items.len);
+    try expectEqual(@as(usize, 5), str.byteCount());
     try expect(str.eql("Hello"));
     try str.appendAll(&[_]u21{ ' ', 'W', 'o', 'r', 'l', 'd' });
     try expect(str.eql("Hello World"));
@@ -232,29 +232,29 @@ test "Zigstr README tests" {
     // You can also construct a Zigstr from coce points.
     const cp_array = [_]u21{ 0x68, 0x65, 0x6C, 0x6C, 0x6F }; // "hello"
     str.deinit();
-    str = try zigstr.fromCodePoints(allocator, &cp_array);
+    str = try Zigstr.fromCodePoints(allocator, &cp_array);
     try expect(str.eql("hello"));
     try expectEqual(str.codePointCount(), 5);
 
     // Also create a Zigstr from a slice of strings.
     str.deinit();
-    str = try zigstr.fromJoined(std.testing.allocator, &[_][]const u8{ "Hello", "World" }, " ");
+    str = try Zigstr.fromJoined(std.testing.allocator, &[_][]const u8{ "Hello", "World" }, " ");
     try expect(str.eql("Hello World"));
 
     // Chomp line breaks.
     try str.reset("Hello\n");
     try str.chomp();
-    try expectEqual(@as(usize, 5), str.bytes.items.len);
+    try expectEqual(@as(usize, 5), str.byteCount());
     try expect(str.eql("Hello"));
 
     try str.reset("Hello\r");
     try str.chomp();
-    try expectEqual(@as(usize, 5), str.bytes.items.len);
+    try expectEqual(@as(usize, 5), str.byteCount());
     try expect(str.eql("Hello"));
 
     try str.reset("Hello\r\n");
     try str.chomp();
-    try expectEqual(@as(usize, 5), str.bytes.items.len);
+    try expectEqual(@as(usize, 5), str.byteCount());
     try expect(str.eql("Hello"));
 
     // byteSlice, codePointSlice, graphemeSlice, substr

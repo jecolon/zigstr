@@ -1,14 +1,6 @@
 # Zigstr
 A UTF-8 string type.
 
-## What? No Characters?
-Zigstr tries to emphasize the clear distinction between bytes (`u8`), code points (`u21`), and
-grapheme clusters (`[]const u8`) as per the Unicode standard. Note that the term *character* is glaringly
-missing here, as it tends to produce more confusion than clarity, and in fact Unicode has no concrete 
-*character* concept, only abstract characters are broadly mentioned. The closest concept resembling
-a human-perceivable *character* in Unicode is the Grapheme Cluster, represented here as the `Grapheme` 
-type returned from each call to the `next` method on a `GraphemeIterator` (see sample code below).
-
 ## Ownership
 There are two possibilities when creating a new Zigstr:
 
@@ -19,7 +11,7 @@ To create a Zigstr in each of these circumstances:
 
 ```zig
 // Here the slice is []const u8.
-var str = try Zigstr.fromBytes(allocator, "Hello");
+var str = try Zigstr.fromConstBytes(allocator, "Hello");
 defer str.deinit(); // still need `deinit` to free other resources, but not the passed-in bytes.
 
 // Here the slice is []u8.
@@ -33,40 +25,25 @@ included in the `Zigstr` struct to keep it light and fast. For the myriad Unicod
 operations, check out the [Ziglyph](https://github.com/jecolon/ziglyph) library.
 
 ## Integrating Zigstr in your Project
-Zigstr uses [Zigmod](https://github.com/nektro/zigmod) for dependency management. It's the easiest way
-to include this library in your project. Once you have `Zigmod`, you just have to run:
+Create a `libs` directory in the root of your Zig project and `cd` into it. Run the following `git` command:
 
 ```sh
-$ zigmod aq add 1/jecolon/zigstr
-$ zigmod fetch
+$ git clone --recurse-submodules https://github.com/jecolon/zigstr
 ```
 
-Now in your `build.zig` you add this import:
+Now in your `build.zig` you can add to your `lib` or `exe` etc.:
 
 ```zig
-const deps = @import("deps.zig");
-```
-
-In the `exe` section for the executable where you wish to have Zigstr available, add:
-
-```zig
-deps.addAllTo(exe);
-```
-
-Now in the code, you can import `Zigstr` like this:
-
-```zig
-const zigstr = @import("zigstr");
-
+exe.addPackagePath("Zigstr", "libs/zigstr/src/Zigstr.zig");
 ```
 
 ## Usage Examples
 ```zig
-const zigstr = @import("zigstr");
+const Zigstr = @import("Zigstr");
 
 test "Zigstr README tests" {
     var allocator = std.testing.allocator;
-    var str = try zigstr.fromBytes(std.testing.allocator, "Héllo");
+    var str = try Zigstr.fromConstBytes(std.testing.allocator, "Héllo");
     defer str.deinit();
 
     // Byte count.
@@ -123,7 +100,7 @@ test "Zigstr README tests" {
     // Copy
     var str2 = try str.copy(allocator);
     defer str2.deinit();
-    try expect(str.eql(str2.bytes.items));
+    try expect(str.eql(str2));
     try expect(str2.eql("Héllo"));
     try expect(str.sameAs(str2));
 
@@ -241,7 +218,7 @@ test "Zigstr README tests" {
     // Append a code point or many.
     try str.reset("Hell");
     try str.append('o');
-    try expectEqual(@as(usize, 5), str.bytes.items.len);
+    try expectEqual(@as(usize, 5), str.byteCount());
     try expect(str.eql("Hello"));
     try str.appendAll(&[_]u21{ ' ', 'W', 'o', 'r', 'l', 'd' });
     try expect(str.eql("Hello World"));
@@ -289,29 +266,29 @@ test "Zigstr README tests" {
     // You can also construct a Zigstr from coce points.
     const cp_array = [_]u21{ 0x68, 0x65, 0x6C, 0x6C, 0x6F }; // "hello"
     str.deinit();
-    str = try zigstr.fromCodePoints(allocator, &cp_array);
+    str = try Zigstr.fromCodePoints(allocator, &cp_array);
     try expect(str.eql("hello"));
     try expectEqual(str.codePointCount(), 5);
 
     // Also create a Zigstr from a slice of strings.
     str.deinit();
-    str = try zigstr.fromJoined(std.testing.allocator, &[_][]const u8{ "Hello", "World" }, " ");
+    str = try Zigstr.fromJoined(std.testing.allocator, &[_][]const u8{ "Hello", "World" }, " ");
     try expect(str.eql("Hello World"));
 
     // Chomp line breaks.
     try str.reset("Hello\n");
     try str.chomp();
-    try expectEqual(@as(usize, 5), str.bytes.items.len);
+    try expectEqual(@as(usize, 5), str.byteCount());
     try expect(str.eql("Hello"));
 
     try str.reset("Hello\r");
     try str.chomp();
-    try expectEqual(@as(usize, 5), str.bytes.items.len);
+    try expectEqual(@as(usize, 5), str.byteCount());
     try expect(str.eql("Hello"));
 
     try str.reset("Hello\r\n");
     try str.chomp();
-    try expectEqual(@as(usize, 5), str.bytes.items.len);
+    try expectEqual(@as(usize, 5), str.byteCount());
     try expect(str.eql("Hello"));
 
     // byteSlice, codePointSlice, graphemeSlice, substr

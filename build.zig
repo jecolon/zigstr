@@ -1,5 +1,4 @@
 const std = @import("std");
-const deps = @import("./deps.zig");
 
 pub fn build(b: *std.build.Builder) void {
     // Standard release options allow the person running `zig build` to select
@@ -8,16 +7,19 @@ pub fn build(b: *std.build.Builder) void {
 
     const lib = b.addStaticLibrary("zigstr", "src/Zigstr.zig");
     lib.setBuildMode(mode);
-    deps.addAllTo(lib);
+    lib.addPackagePath("ziglyph", "libs/ziglyph/src/ziglyph.zig");
+    lib.addPackagePath("cow_list", "libs/cow_list/src/main.zig");
     lib.install();
 
     var main_tests = b.addTest("src/main.zig");
     main_tests.setBuildMode(mode);
-    deps.addAllTo(main_tests);
+    main_tests.addPackagePath("ziglyph", "libs/ziglyph/src/ziglyph.zig");
+    main_tests.addPackagePath("cow_list", "libs/cow_list/src/main.zig");
 
     var zs_tests = b.addTest("src/Zigstr.zig");
     zs_tests.setBuildMode(mode);
-    deps.addAllTo(zs_tests);
+    zs_tests.addPackagePath("ziglyph", "libs/ziglyph/src/ziglyph.zig");
+    zs_tests.addPackagePath("cow_list", "libs/cow_list/src/main.zig");
 
     const test_step = b.step("test", "Run library tests");
     test_step.dependOn(&main_tests.step);
