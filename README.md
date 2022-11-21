@@ -56,7 +56,7 @@ test "Zigstr README tests" {
     defer str.deinit();
 
     // Byte count.
-    try expectEqual(@as(usize, 6), str.byteCount());
+    try expectEqual(@as(usize, 6), str.byteLen());
 
     // Code point iteration.
     var cp_iter = str.codePointIter();
@@ -68,7 +68,7 @@ test "Zigstr README tests" {
     }
 
     // Code point count.
-    try expectEqual(@as(usize, 5), try str.codePointCount());
+    try expectEqual(@as(usize, 5), try str.codePointLen());
 
     // Collect all code points at once.
     const code_points = try str.codePoints(allocator);
@@ -87,7 +87,7 @@ test "Zigstr README tests" {
     }
 
     // Collect all grapheme clusters at once.
-    try expectEqual(@as(usize, 5), try str.graphemeCount());
+    try expectEqual(@as(usize, 5), try str.graphemeLen());
     const gcs = try str.graphemes(allocator);
     defer allocator.free(gcs);
 
@@ -96,7 +96,7 @@ test "Zigstr README tests" {
     }
 
     // Grapheme count.
-    try expectEqual(@as(usize, 5), try str.graphemeCount());
+    try expectEqual(@as(usize, 5), try str.graphemeLen());
 
     // Indexing (with negative indexes too.)
     try expectEqual(try str.byteAt(0), 72); // H
@@ -111,7 +111,6 @@ test "Zigstr README tests" {
     defer str2.deinit();
     try expect(str.eql(str2));
     try expect(str2.eql("Héllo"));
-    try expect(str.sameAs(str2));
 
     // Empty and obtain owned slice of bytes.
     const bytes2 = try str2.toOwnedSlice();
@@ -165,7 +164,7 @@ test "Zigstr README tests" {
     try expect(tok_iter.next() == null);
 
     // Collect all tokens at once.
-    var ts = try str.tokenize(" ", allocator);
+    var ts = try str.tokenize(allocator, " ");
     defer allocator.free(ts);
     try expectEqual(@as(usize, 2), ts.len);
     try expectEqualStrings("Hello", ts[0]);
@@ -180,7 +179,7 @@ test "Zigstr README tests" {
     try expect(split_iter.next() == null);
 
     // Collect all sub-strings at once.
-    var ss = try str.split(" ", allocator);
+    var ss = try str.split(allocator, " ");
     defer allocator.free(ss);
     try expectEqual(@as(usize, 4), ss.len);
     try expectEqualStrings("", ss[0]);
@@ -227,7 +226,7 @@ test "Zigstr README tests" {
     // Append a code point or many.
     try str.reset("Hell");
     try str.append('o');
-    try expectEqual(@as(usize, 5), str.byteCount());
+    try expectEqual(@as(usize, 5), str.byteLen());
     try expect(str.eql("Hello"));
     try str.appendAll(&[_]u21{ ' ', 'W', 'o', 'r', 'l', 'd' });
     try expect(str.eql("Hello World"));
@@ -277,7 +276,7 @@ test "Zigstr README tests" {
     str.deinit();
     str = try Zigstr.fromCodePoints(allocator, &cp_array);
     try expect(str.eql("hello"));
-    try expectEqual(str.codePointCount(), 5);
+    try expectEqual(str.codePointLen(), 5);
 
     // Also create a Zigstr from a slice of strings.
     str.deinit();
@@ -287,17 +286,17 @@ test "Zigstr README tests" {
     // Chomp line breaks.
     try str.reset("Hello\n");
     try str.chomp();
-    try expectEqual(@as(usize, 5), str.byteCount());
+    try expectEqual(@as(usize, 5), str.byteLen());
     try expect(str.eql("Hello"));
 
     try str.reset("Hello\r");
     try str.chomp();
-    try expectEqual(@as(usize, 5), str.byteCount());
+    try expectEqual(@as(usize, 5), str.byteLen());
     try expect(str.eql("Hello"));
 
     try str.reset("Hello\r\n");
     try str.chomp();
-    try expectEqual(@as(usize, 5), str.byteCount());
+    try expectEqual(@as(usize, 5), str.byteLen());
     try expect(str.eql("Hello"));
 
     // byteSlice, codePointSlice, graphemeSlice, substr

@@ -13,16 +13,16 @@ const prop_list = ziglyph.prop_list;
 const Self = @This();
 
 allocator: mem.Allocator,
-bytes: CowList(u8),
+list: CowList(u8),
 
 /// fromConstBytes returns a new Zigstr from the byte slice `str`, which will *not* be freed on `deinit`.
 pub fn fromConstBytes(allocator: mem.Allocator, str: []const u8) !Self {
-    return Self{ .allocator = allocator, .bytes = CowList(u8).initConst(allocator, str) };
+    return Self{ .allocator = allocator, .list = CowList(u8).initConst(allocator, str) };
 }
 
 /// fromOwnedBytes returns a new Zigstr from the owned byte slice `str`, which will be freed on `deinit`.
 pub fn fromOwnedBytes(allocator: mem.Allocator, str: []u8) !Self {
-    return Self{ .allocator = allocator, .bytes = CowList(u8).initOwned(allocator, str) };
+    return Self{ .allocator = allocator, .list = CowList(u8).initOwned(allocator, str) };
 }
 
 /// fromCodePoints returns a new Zigstr from `code points`.
@@ -36,7 +36,7 @@ pub fn fromCodePoints(allocator: mem.Allocator, code_points: []const u21) !Self 
     if (ascii_only) {
         return Self{
             .allocator = allocator,
-            .bytes = blk_b: {
+            .list = blk_b: {
                 var list = try std.ArrayList(u8).initCapacity(allocator, code_points.len);
                 defer list.deinit();
                 for (code_points) |cp| list.appendAssumeCapacity(@intCast(u8, cp));
@@ -46,7 +46,7 @@ pub fn fromCodePoints(allocator: mem.Allocator, code_points: []const u21) !Self 
     } else {
         return Self{
             .allocator = allocator,
-            .bytes = blk_b: {
+            .list = blk_b: {
                 var list = std.ArrayList(u8).init(allocator);
                 defer list.deinit();
                 var cp_buf: [4]u8 = undefined;
@@ -67,7 +67,7 @@ test "Zigstr from code points" {
     var str = try fromCodePoints(allocator, &cp_array);
     defer str.deinit();
 
-    try expectEqualStrings(str.bytes.asConstSlice(), "hello");
+    try expect(str.eql("hello"));
 }
 
 /// fromJoined returns a new Zigstr from the concatenation of strings in `slice` with `sep` separator.
@@ -83,12 +83,17 @@ test "Zigstr fromJoined" {
 }
 
 pub fn deinit(self: *Self) void {
-    self.bytes.deinit();
+    self.list.deinit();
+}
+
+/// bytes returns a `[]const u8` of the bytes that make up this Zigstr.
+pub fn bytes(self: Self) []const u8 {
+    return self.list.asConstSlice();
 }
 
 /// toOwnedSlice returns the bytes of this Zigstr to be freed by caller. This Zigstr is reset to empty.
 pub fn toOwnedSlice(self: *Self) ![]u8 {
-    return self.bytes.toOwnedSlice();
+    return self.list.toOwnedSlice();
 }
 
 test "Zigstr toOwnedSlice" {
@@ -97,32 +102,32 @@ test "Zigstr toOwnedSlice" {
     defer str.deinit();
 
     try expect(str.eql("Hello"));
-    const bytes = try str.toOwnedSlice();
-    defer allocator.free(bytes);
-    try expectEqualStrings(bytes, "Hello");
+    const slice = try str.toOwnedSlice();
+    defer allocator.free(slice);
+    try expectEqualStrings(slice, "Hello");
     try expect(str.eql(""));
 }
 
 /// reset reinitializes this Zigstr from the byte slice `str`.
 pub fn reset(self: *Self, str: []const u8) !void {
-    var list = try self.bytes.asList();
+    var list = try self.list.asList();
     try list.replaceRange(0, list.items.len, str);
 }
 
-/// byteCount returns the number of bytes, which can be different from the number of code points and the
+/// byteLen returns the number of bytes, which can be different from the number of code points and the
 /// number of graphemes.
-pub fn byteCount(self: Self) usize {
-    return self.bytes.asConstSlice().len;
+pub fn byteLen(self: Self) usize {
+    return self.list.asConstSlice().len;
 }
 
 /// codePointIter returns a code point iterator based on the bytes of this Zigstr.
 pub fn codePointIter(self: Self) CodePointIterator {
-    return CodePointIterator{ .bytes = self.bytes.asConstSlice() };
+    return CodePointIterator{ .bytes = self.bytes() };
 }
 
 /// codePoints returns the code points that make up this Zigstr. Caller must free returned slice.
 pub fn codePoints(self: *Self, allocator: mem.Allocator) ![]u21 {
-    var code_points = try std.ArrayList(u21).initCapacity(allocator, self.bytes.asConstSlice().len);
+    var code_points = try std.ArrayList(u21).initCapacity(allocator, self.byteLen());
     defer code_points.deinit();
 
     var iter = self.codePointIter();
@@ -133,9 +138,9 @@ pub fn codePoints(self: *Self, allocator: mem.Allocator) ![]u21 {
     return code_points.toOwnedSlice();
 }
 
-/// codePointCount returns the number of code points, which can be different from the number of bytes
+/// codePointLen returns the number of code points, which can be different from the number of bytes
 /// and the number of graphemes.
-pub fn codePointCount(self: *Self) !usize {
+pub fn codePointLen(self: *Self) !usize {
     const cps = try self.codePoints(self.allocator);
     defer self.allocator.free(cps);
     return cps.len;
@@ -144,14 +149,14 @@ pub fn codePointCount(self: *Self) !usize {
 /// graphemeIter returns a grapheme cluster iterator based on the bytes of this Zigstr. Each grapheme
 /// can be composed of multiple code points, so the next method returns a slice of bytes.
 pub fn graphemeIter(self: *Self) anyerror!GraphemeIterator {
-    return GraphemeIterator.init(self.bytes.asConstSlice());
+    return GraphemeIterator.init(self.bytes());
 }
 
 /// graphemes returns the grapheme clusters that make up this Zigstr. Caller must free returned slice.
 pub fn graphemes(self: *Self, allocator: mem.Allocator) ![]Grapheme {
     // Cache miss, generate.
     var giter = try self.graphemeIter();
-    var gcs = try std.ArrayList(Grapheme).initCapacity(allocator, self.bytes.asConstSlice().len);
+    var gcs = try std.ArrayList(Grapheme).initCapacity(allocator, self.byteLen());
     defer gcs.deinit();
 
     while (giter.next()) |gc| {
@@ -161,9 +166,9 @@ pub fn graphemes(self: *Self, allocator: mem.Allocator) ![]Grapheme {
     return gcs.toOwnedSlice();
 }
 
-/// graphemeCount returns the number of grapheme clusters, which can be different from the number of bytes
+/// graphemeLen returns the number of grapheme clusters, which can be different from the number of bytes
 /// and the number of code points.
-pub fn graphemeCount(self: *Self) !usize {
+pub fn graphemeLen(self: *Self) !usize {
     const gcs = try self.graphemes(self.allocator);
     defer self.allocator.free(gcs);
     return gcs.len;
@@ -173,31 +178,26 @@ pub fn graphemeCount(self: *Self) !usize {
 pub fn copy(self: Self, allocator: mem.Allocator) !Self {
     return Self{
         .allocator = allocator,
-        .bytes = b_blk: {
-            var list = try std.ArrayList(u8).initCapacity(allocator, self.bytes.asConstSlice().len);
+        .list = b_blk: {
+            var list = try std.ArrayList(u8).initCapacity(allocator, self.byteLen());
             defer list.deinit();
-            list.appendSliceAssumeCapacity(self.bytes.asConstSlice());
+            list.appendSliceAssumeCapacity(self.bytes());
             break :b_blk CowList(u8).initOwned(allocator, list.toOwnedSlice());
         },
     };
 }
 
-/// sameAs convenience method to test exact byte equality of two Zigstrs.
-pub fn sameAs(self: Self, other: Self) bool {
-    return self.eql(other.bytes.asConstSlice());
-}
-
 /// eql compares for exact byte per byte equality with `other`.
 pub fn eql(self: Self, other: anytype) bool {
-    const bytes = self.bytes.asConstSlice();
+    const slice = self.bytes();
 
     if (@TypeOf(other) == Self) {
-        return std.mem.eql(u8, bytes, other.bytes.asConstSlice());
+        return std.mem.eql(u8, slice, other.bytes());
     }
 
     const info = @typeInfo(@TypeOf(other));
     if (info == .Pointer) {
-        return std.mem.eql(u8, bytes, other[0..other.len]);
+        return std.mem.eql(u8, slice, other[0..other.len]);
     }
 
     return false;
@@ -237,21 +237,21 @@ pub fn isAsciiStr(str: []const u8) !bool {
 
 /// trimLeft removes `str` from the left of this Zigstr, mutating it.
 pub fn trimLeft(self: *Self, str: []const u8) !void {
-    var list = try self.bytes.asList();
+    var list = try self.list.asList();
     const trimmed = mem.trimLeft(u8, list.items, str);
     try list.replaceRange(0, list.items.len, trimmed);
 }
 
 /// trimRight removes `str` from the right of this Zigstr, mutating it.
 pub fn trimRight(self: *Self, str: []const u8) !void {
-    var list = try self.bytes.asList();
+    var list = try self.list.asList();
     const trimmed = mem.trimRight(u8, list.items, str);
     try list.replaceRange(0, list.items.len, trimmed);
 }
 
 /// trim removes `str` from both the left and right of this Zigstr, mutating it.
 pub fn trim(self: *Self, str: []const u8) !void {
-    var list = try self.bytes.asList();
+    var list = try self.list.asList();
     const trimmed = mem.trim(u8, list.items, str);
     try list.replaceRange(0, list.items.len, trimmed);
 }
@@ -264,7 +264,7 @@ pub fn dropLeft(self: *Self, n: usize) !void {
     if (n >= gcs.len) return error.IndexOutOfBounds;
 
     const offset = gcs[n].offset;
-    var list = try self.bytes.asList();
+    var list = try self.list.asList();
     mem.rotate(u8, list.items, offset);
     list.shrinkRetainingCapacity(list.items.len - offset);
 }
@@ -290,7 +290,7 @@ pub fn dropRight(self: *Self, n: usize) !void {
     }
 
     const offset = gcs[gcs.len - n].offset;
-    var list = try self.bytes.asList();
+    var list = try self.list.asList();
     list.shrinkRetainingCapacity(offset);
 }
 
@@ -307,7 +307,7 @@ pub fn insert(self: *Self, str: []const u8, n: usize) !void {
     const gcs = try self.graphemes(self.allocator);
     defer self.allocator.free(gcs);
 
-    var list = try self.bytes.asList();
+    var list = try self.list.asList();
     if (n < gcs.len) {
         try list.insertSlice(gcs[n].offset, str);
     } else {
@@ -323,18 +323,18 @@ test "Zigstr insertions" {
     try expect(str.eql("Héllo"));
     try str.insert("Hey ", 0);
     try expect(str.eql("Hey Héllo"));
-    try str.insert("!", try str.graphemeCount());
+    try str.insert("!", try str.graphemeLen());
     try expect(str.eql("Hey Héllo!"));
 }
 
 /// indexOf returns the index of `needle` in this Zigstr or null if not found.
 pub fn indexOf(self: Self, needle: []const u8) !?usize {
     if (needle.len > 0) {
-        const bytes = self.bytes.asConstSlice();
+        const slice = self.bytes();
 
-        if (mem.indexOf(u8, bytes, needle)) |end| {
+        if (mem.indexOf(u8, slice, needle)) |end| {
             var i: usize = 0;
-            var iter = try GraphemeIterator.init(bytes[0..end]);
+            var iter = try GraphemeIterator.init(slice[0..end]);
             while (iter.next()) |_| : (i += 1) {} else return i;
         }
     }
@@ -350,11 +350,11 @@ pub fn contains(self: Self, str: []const u8) !bool {
 /// lastIndexOf returns the index of `needle` in this Zigstr starting from the end, or null if not found.
 pub fn lastIndexOf(self: Self, needle: []const u8) !?usize {
     if (needle.len > 0) {
-        const bytes = self.bytes.asConstSlice();
+        const slice = self.bytes();
 
-        if (mem.lastIndexOf(u8, bytes, needle)) |end| {
+        if (mem.lastIndexOf(u8, slice, needle)) |end| {
             var i: usize = 0;
-            var iter = try GraphemeIterator.init(bytes[0..end]);
+            var iter = try GraphemeIterator.init(slice[0..end]);
             while (iter.next()) |_| : (i += 1) {} else return i;
         }
     }
@@ -364,25 +364,23 @@ pub fn lastIndexOf(self: Self, needle: []const u8) !?usize {
 
 /// count returns the number of `needle`s in this Zigstr.
 pub fn count(self: Self, needle: []const u8) usize {
-    return mem.count(u8, self.bytes.asConstSlice(), needle);
+    return mem.count(u8, self.bytes(), needle);
 }
 
 /// tokenIter returns an iterator on tokens resulting from splitting this Zigstr at every `delim`.
 /// Semantics are that of `std.mem.tokenize`.
 pub fn tokenIter(self: Self, delim: []const u8) mem.TokenIterator(u8) {
-    return mem.tokenize(u8, self.bytes.asConstSlice(), delim);
+    return mem.tokenize(u8, self.bytes(), delim);
 }
 
 /// tokenize returns a slice of tokens resulting from splitting this Zigstr at every `delim`.
 /// Caller must free returned slice.
-pub fn tokenize(self: Self, delim: []const u8, allocator: mem.Allocator) ![][]const u8 {
-    var ts = try std.ArrayList([]const u8).initCapacity(allocator, self.bytes.asConstSlice().len);
+pub fn tokenize(self: Self, allocator: mem.Allocator, delim: []const u8) ![][]const u8 {
+    var ts = std.ArrayList([]const u8).init(allocator);
     defer ts.deinit();
 
     var iter = self.tokenIter(delim);
-    while (iter.next()) |t| {
-        ts.appendAssumeCapacity(t);
-    }
+    while (iter.next()) |t| try ts.append(t);
 
     return ts.toOwnedSlice();
 }
@@ -390,17 +388,17 @@ pub fn tokenize(self: Self, delim: []const u8, allocator: mem.Allocator) ![][]co
 /// splitIter returns an iterator on substrings resulting from splitting this Zigstr at every `delim`.
 /// Semantics are that of `std.mem.split`.
 pub fn splitIter(self: Self, delim: []const u8) mem.SplitIterator(u8) {
-    return mem.split(u8, self.bytes.asConstSlice(), delim);
+    return mem.split(u8, self.bytes(), delim);
 }
 
 /// split returns a slice of substrings resulting from splitting this Zigstr at every `delim`.
 /// Caller must free returned slice.
-pub fn split(self: Self, delim: []const u8, allocator: mem.Allocator) ![][]const u8 {
-    const bytes = self.bytes.asConstSlice();
-    var ss = try std.ArrayList([]const u8).initCapacity(allocator, bytes.len);
+pub fn split(self: Self, allocator: mem.Allocator, delim: []const u8) ![][]const u8 {
+    const slice = self.bytes();
+    var ss = try std.ArrayList([]const u8).initCapacity(allocator, slice.len);
     defer ss.deinit();
 
-    var iter = mem.split(u8, bytes, delim);
+    var iter = mem.split(u8, slice, delim);
     while (iter.next()) |s| {
         ss.appendAssumeCapacity(s);
     }
@@ -416,7 +414,7 @@ pub fn lineIter(self: Self) mem.SplitIterator(u8) {
 /// lines returns a slice of substrings resulting from splitting this Zigstr at every \n.
 /// Caller must free returned slice.
 pub fn lines(self: Self, allocator: mem.Allocator) ![][]const u8 {
-    return self.split("\n", allocator);
+    return self.split(allocator, "\n");
 }
 
 test "Zigstr lines" {
@@ -439,7 +437,7 @@ pub fn reverse(self: *Self) !void {
     const gcs = try self.graphemes(self.allocator);
     defer self.allocator.free(gcs);
 
-    var list = try std.ArrayList(u8).initCapacity(self.allocator, self.bytes.asConstSlice().len);
+    var list = try std.ArrayList(u8).initCapacity(self.allocator, self.byteLen());
     defer list.deinit();
     var gc_index: isize = @intCast(isize, gcs.len) - 1;
 
@@ -447,8 +445,8 @@ pub fn reverse(self: *Self) !void {
         list.appendSliceAssumeCapacity(gcs[@intCast(usize, gc_index)].bytes);
     }
 
-    self.bytes.deinit();
-    self.bytes = CowList(u8).initOwned(self.allocator, list.toOwnedSlice());
+    self.list.deinit();
+    self.list = CowList(u8).initOwned(self.allocator, list.toOwnedSlice());
 }
 
 test "Zigstr reverse" {
@@ -456,23 +454,23 @@ test "Zigstr reverse" {
     defer str.deinit();
 
     try str.reverse();
-    try expectEqualStrings(str.bytes.asConstSlice(), "😊 olléH");
+    try expect(str.eql("😊 olléH"));
 }
 
 /// startsWith returns true if this Zigstr starts with `str`.
 pub fn startsWith(self: Self, str: []const u8) bool {
-    return mem.startsWith(u8, self.bytes.asConstSlice(), str);
+    return mem.startsWith(u8, self.bytes(), str);
 }
 
 /// endsWith returns true if this Zigstr ends with `str`.
 pub fn endsWith(self: Self, str: []const u8) bool {
-    return mem.endsWith(u8, self.bytes.asConstSlice(), str);
+    return mem.endsWith(u8, self.bytes(), str);
 }
 
 /// concatAll appends each string in `others` to this Zigstr, mutating it.
 pub fn concatAll(self: *Self, others: []const []const u8) !void {
     for (others) |o| {
-        var list = try self.bytes.asList();
+        var list = try self.list.asList();
         try list.appendSlice(o);
     }
 }
@@ -485,7 +483,7 @@ pub fn concat(self: *Self, other: []const u8) !void {
 /// replace all occurrences of `needle` with `replacement`, mutating this Zigstr. Returns the total
 /// replacements made.
 pub fn replace(self: *Self, needle: []const u8, replacement: []const u8) !usize {
-    var list = try self.bytes.asList();
+    var list = try self.list.asList();
     const len = mem.replacementSize(u8, list.items, needle, replacement);
     var buf = try self.allocator.alloc(u8, len);
     defer self.allocator.free(buf);
@@ -533,7 +531,7 @@ pub fn appendAll(self: *Self, cp_list: []const u21) !void {
 
 /// isEmpty returns true if this Zigstr has no bytes.
 pub fn isEmpty(self: Self) bool {
-    return self.bytes.asConstSlice().len == 0;
+    return self.byteLen() == 0;
 }
 
 /// isBlank returns true if this Zigstr consits of whitespace only .
@@ -559,7 +557,7 @@ test "Zigstr isBlank" {
 pub fn chomp(self: *Self) !void {
     if (self.isEmpty()) return;
 
-    var list = try self.bytes.asList();
+    var list = try self.list.asList();
     const len = list.items.len;
     const last = list.items[len - 1];
     if (last == '\r' or last == '\n') {
@@ -572,16 +570,16 @@ pub fn chomp(self: *Self) !void {
 
 /// byteAt returns the byte at index `i`.
 pub fn byteAt(self: Self, i: isize) !u8 {
-    const bytes = self.bytes.asConstSlice();
+    const slice = self.bytes();
 
-    if (i >= bytes.len) return error.IndexOutOfBounds;
+    if (i >= slice.len) return error.IndexOutOfBounds;
 
     if (i < 0) {
-        if (-%i > bytes.len) return error.IndexOutOfBounds;
-        return bytes[bytes.len - @intCast(usize, -i)];
+        if (-%i > slice.len) return error.IndexOutOfBounds;
+        return slice[slice.len - @intCast(usize, -i)];
     }
 
-    return bytes[@intCast(usize, i)];
+    return slice[@intCast(usize, i)];
 }
 
 /// codePointAt returns the `i`th code point.
@@ -614,11 +612,11 @@ pub fn graphemeAt(self: *Self, i: isize) !Grapheme {
 
 /// byteSlice returnes the bytes from this Zigstr in the specified range from `start` to `end` - 1.
 pub fn byteSlice(self: Self, start: usize, end: usize) ![]const u8 {
-    const bytes = self.bytes.asConstSlice();
+    const slice = self.bytes();
     if (end <= start) return error.InvalidRange;
-    if (start >= bytes.len or end > bytes.len) return error.IndexOutOfBounds;
+    if (start >= slice.len or end > slice.len) return error.IndexOutOfBounds;
 
-    return bytes[start..end];
+    return slice[start..end];
 }
 
 /// codePointSlice returnes the code points from this Zigstr in the specified range from `start` to `end` - 1.
@@ -665,11 +663,11 @@ pub fn graphemeSlice(self: *Self, allocator: mem.Allocator, start: usize, end: u
 /// up to `end` grapheme index - 1.
 pub fn substr(self: *Self, start: usize, end: usize) ![]const u8 {
     if (end <= start) return error.InvalidRange;
-    const bytes = self.bytes.asConstSlice();
+    const slice = self.bytes();
 
-    if (try isAsciiStr(bytes)) {
-        if (start >= bytes.len or end > bytes.len) return error.IndexOutOfBounds;
-        return bytes[start..end];
+    if (try isAsciiStr(slice)) {
+        if (start >= slice.len or end > slice.len) return error.IndexOutOfBounds;
+        return slice[start..end];
     }
 
     const gcs = try self.graphemes(self.allocator);
@@ -677,36 +675,36 @@ pub fn substr(self: *Self, start: usize, end: usize) ![]const u8 {
 
     if (start >= gcs.len or end > gcs.len) return error.IndexOutOfBounds;
 
-    return bytes[gcs[start].offset..gcs[end].offset];
+    return slice[gcs[start].offset..gcs[end].offset];
 }
 
 /// isLower detects if all the code points in this Zigstr are lowercase.
 pub fn isLower(self: *Self) !bool {
-    return ziglyph.isLowerStr(self.bytes.asConstSlice());
+    return ziglyph.isLowerStr(self.bytes());
 }
 
 /// toLower converts this Zigstr to lowercase, mutating it.
 pub fn toLower(self: *Self) !void {
-    const lower = try ziglyph.toLowerStr(self.allocator, self.bytes.asConstSlice());
+    const lower = try ziglyph.toLowerStr(self.allocator, self.bytes());
     defer self.allocator.free(lower);
     try self.reset(lower);
 }
 
 /// isUpper detects if all the code points in this Zigstr are uppercase.
 pub fn isUpper(self: *Self) !bool {
-    return ziglyph.isUpperStr(self.bytes.asConstSlice());
+    return ziglyph.isUpperStr(self.bytes());
 }
 
 /// toUpper converts this Zigstr to uppercase, mutating it.
 pub fn toUpper(self: *Self) !void {
-    const upper = try ziglyph.toUpperStr(self.allocator, self.bytes.asConstSlice());
+    const upper = try ziglyph.toUpperStr(self.allocator, self.bytes());
     defer self.allocator.free(upper);
     try self.reset(upper);
 }
 
 /// toTitle converts this Zigstr to titlecase, mutating it.
 pub fn toTitle(self: *Self) !void {
-    const title = try ziglyph.toTitleStr(self.allocator, self.bytes.asConstSlice());
+    const title = try ziglyph.toTitleStr(self.allocator, self.bytes());
     defer self.allocator.free(title);
     try self.reset(title);
 }
@@ -715,17 +713,17 @@ pub fn toTitle(self: *Self) !void {
 pub fn format(self: Self, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
     _ = fmt;
     _ = options;
-    _ = try writer.print("{s}", .{self.bytes.asConstSlice()});
+    _ = try writer.print("{s}", .{self.bytes()});
 }
 
 /// parseInt tries to parse this Zigstr as an integer of type `T` in base `radix`.
 pub fn parseInt(self: Self, comptime T: type, radix: u8) !T {
-    return std.fmt.parseInt(T, self.bytes.asConstSlice(), radix);
+    return std.fmt.parseInt(T, self.bytes(), radix);
 }
 
 /// parseFloat tries to parse this Zigstr as an floating point number of type `T`.
 pub fn parseFloat(self: Self, comptime T: type) !T {
-    return std.fmt.parseFloat(T, self.bytes.asConstSlice());
+    return std.fmt.parseFloat(T, self.bytes());
 }
 
 test "Zigstr parse numbers" {
@@ -741,17 +739,17 @@ test "Zigstr parse numbers" {
 pub fn repeat(self: *Self, n: usize) !void {
     if (n == 1) return;
 
-    const bytes = self.bytes.asConstSlice();
-    var list = try std.ArrayList(u8).initCapacity(self.allocator, bytes.len * n);
+    const slice = self.bytes();
+    var list = try std.ArrayList(u8).initCapacity(self.allocator, slice.len * n);
     defer list.deinit();
 
     var i: usize = 0;
     while (i < n) : (i += 1) {
-        list.appendSliceAssumeCapacity(bytes);
+        list.appendSliceAssumeCapacity(slice);
     }
 
-    self.bytes.deinit();
-    self.bytes = CowList(u8).initOwned(self.allocator, list.toOwnedSlice());
+    self.list.deinit();
+    self.list = CowList(u8).initOwned(self.allocator, list.toOwnedSlice());
 }
 
 test "Zigstr repeat" {
@@ -759,18 +757,18 @@ test "Zigstr repeat" {
     defer str.deinit();
 
     try str.repeat(10);
-    try expectEqualStrings(str.bytes.asConstSlice(), "**********");
+    try expect(str.eql("**********"));
     try str.repeat(1);
-    try expectEqualStrings(str.bytes.asConstSlice(), "**********");
+    try expect(str.eql("**********"));
     try str.repeat(0);
-    try expectEqualStrings(str.bytes.asConstSlice(), "");
+    try expect(str.eql(""));
 }
 
 /// parseBool parses this Zigstr as either true or false.
 pub fn parseBool(self: Self) !bool {
-    const bytes = self.bytes.asConstSlice();
-    if (mem.eql(u8, bytes, "true")) return true;
-    if (mem.eql(u8, bytes, "false")) return false;
+    const slice = self.bytes();
+    if (mem.eql(u8, slice, "true")) return true;
+    if (mem.eql(u8, slice, "false")) return false;
 
     return error.ParseBoolError;
 }
@@ -782,25 +780,25 @@ pub fn parseBool(self: Self) !bool {
 /// * Yes, Y, and On in any case combination are true.
 /// * No, N, and Off in any case combination are false.
 pub fn parseTruthy(self: Self) !bool {
-    var lstr = try fromConstBytes(self.allocator, self.bytes.asConstSlice());
+    var lstr = try fromConstBytes(self.allocator, self.bytes());
     defer lstr.deinit();
 
     try lstr.toLower();
-    const bytes = lstr.bytes.asConstSlice();
+    const slice = lstr.bytes();
     // True
-    if (mem.eql(u8, bytes, "true")) return true;
-    if (mem.eql(u8, bytes, "t")) return true;
-    if (mem.eql(u8, bytes, "on")) return true;
-    if (mem.eql(u8, bytes, "yes")) return true;
-    if (mem.eql(u8, bytes, "y")) return true;
-    if (mem.eql(u8, bytes, "1")) return true;
+    if (mem.eql(u8, slice, "true")) return true;
+    if (mem.eql(u8, slice, "t")) return true;
+    if (mem.eql(u8, slice, "on")) return true;
+    if (mem.eql(u8, slice, "yes")) return true;
+    if (mem.eql(u8, slice, "y")) return true;
+    if (mem.eql(u8, slice, "1")) return true;
     // False
-    if (mem.eql(u8, bytes, "false")) return false;
-    if (mem.eql(u8, bytes, "f")) return false;
-    if (mem.eql(u8, bytes, "off")) return false;
-    if (mem.eql(u8, bytes, "no")) return false;
-    if (mem.eql(u8, bytes, "n")) return false;
-    if (mem.eql(u8, bytes, "0")) return false;
+    if (mem.eql(u8, slice, "false")) return false;
+    if (mem.eql(u8, slice, "f")) return false;
+    if (mem.eql(u8, slice, "off")) return false;
+    if (mem.eql(u8, slice, "no")) return false;
+    if (mem.eql(u8, slice, "n")) return false;
+    if (mem.eql(u8, slice, "0")) return false;
 
     return error.ParseTruthyError;
 }
@@ -868,8 +866,8 @@ test "Zigstr code points" {
     defer allocator.free(cps);
     try expectEqualSlices(u21, &want, cps);
 
-    try expectEqual(@as(usize, 6), str.byteCount());
-    try expectEqual(@as(usize, 5), try str.codePointCount());
+    try expectEqual(@as(usize, 6), str.byteLen());
+    try expectEqual(@as(usize, 5), try str.codePointLen());
 }
 
 test "Zigstr graphemes" {
@@ -891,8 +889,8 @@ test "Zigstr graphemes" {
         try expect(gc.eql(want[j]));
     }
 
-    try expectEqual(@as(usize, 6), str.byteCount());
-    try expectEqual(@as(usize, 5), try str.graphemeCount());
+    try expectEqual(@as(usize, 6), str.byteLen());
+    try expectEqual(@as(usize, 5), try str.graphemeLen());
 }
 
 test "Zigstr copy" {
@@ -902,9 +900,8 @@ test "Zigstr copy" {
     var str2 = try str1.copy(std.testing.allocator);
     defer str2.deinit();
 
-    try expect(str1.eql(str2.bytes.asConstSlice()));
+    try expect(str1.eql(str2));
     try expect(str2.eql("Zig"));
-    try expect(str1.sameAs(str2));
 }
 
 test "Zigstr isAsciiStr" {
@@ -981,7 +978,7 @@ test "Zigstr tokenize" {
     try expectEqualStrings("World", iter.next().?);
     try expect(iter.next() == null);
 
-    var ts = try str.tokenize(" ", allocator);
+    var ts = try str.tokenize(allocator, " ");
     defer allocator.free(ts);
     try expectEqual(@as(usize, 2), ts.len);
     try expectEqualStrings("Hello", ts[0]);
@@ -1000,7 +997,7 @@ test "Zigstr split" {
     try expectEqualStrings("", iter.next().?);
     try expect(iter.next() == null);
 
-    var ss = try str.split(" ", allocator);
+    var ss = try str.split(allocator, " ");
     defer allocator.free(ss);
     try expectEqual(@as(usize, 4), ss.len);
     try expectEqualStrings("", ss[0]);
@@ -1030,10 +1027,10 @@ test "Zigstr concat" {
     defer str.deinit();
 
     try str.concat(" World");
-    try expectEqualStrings("Hello World", str.bytes.asConstSlice());
+    try expect(str.eql("Hello World"));
     var others = [_][]const u8{ " is", " the", " tradition!" };
     try str.concatAll(&others);
-    try expectEqualStrings("Hello World is the tradition!", str.bytes.asConstSlice());
+    try expect(str.eql("Hello World is the tradition!"));
 }
 
 test "Zigstr replace" {
@@ -1054,10 +1051,10 @@ test "Zigstr append" {
     defer str.deinit();
 
     try str.append('o');
-    try expectEqual(@as(usize, 5), str.bytes.asConstSlice().len);
+    try expectEqual(@as(usize, 5), str.byteLen());
     try expect(str.eql("Hello"));
     try str.appendAll(&[_]u21{ ' ', 'W', 'o', 'r', 'l', 'd' });
-    try expectEqual(@as(usize, 11), str.bytes.asConstSlice().len);
+    try expectEqual(@as(usize, 11), str.byteLen());
     try expect(str.eql("Hello World"));
 }
 
@@ -1066,17 +1063,17 @@ test "Zigstr chomp" {
     defer str.deinit();
 
     try str.chomp();
-    try expectEqual(@as(usize, 5), str.bytes.asConstSlice().len);
+    try expectEqual(@as(usize, 5), str.byteLen());
     try expect(str.eql("Hello"));
 
     try str.reset("Hello\r");
     try str.chomp();
-    try expectEqual(@as(usize, 5), str.bytes.asConstSlice().len);
+    try expectEqual(@as(usize, 5), str.byteLen());
     try expect(str.eql("Hello"));
 
     try str.reset("Hello\r\n");
     try str.chomp();
-    try expectEqual(@as(usize, 5), str.bytes.asConstSlice().len);
+    try expectEqual(@as(usize, 5), str.byteLen());
     try expect(str.eql("Hello"));
 }
 
