@@ -1,6 +1,7 @@
 [submodule "libs/ziglyph"]
 	path = libs/ziglyph
 	url = https://github.com/jecolon/ziglyph
+	branch = v0.10
 [submodule "libs/cow_list"]
 	path = libs/cow_list
 	url = https://github.com/jecolon/cow_list
