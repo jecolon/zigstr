@@ -186,27 +186,27 @@ const combinedTable = init: {
     comptime var i = 0;
     inline while (i < 128) : (i += 1) {
         table[i] =
-            @as(u9, alpha[i]) << @enumToInt(tIndex.Alpha) |
-            @as(u9, hex[i]) << @enumToInt(tIndex.Hex) |
-            @as(u9, space[i]) << @enumToInt(tIndex.Space) |
-            @as(u9, digit[i]) << @enumToInt(tIndex.Digit) |
-            @as(u9, lower[i]) << @enumToInt(tIndex.Lower) |
-            @as(u9, upper[i]) << @enumToInt(tIndex.Upper) |
-            @as(u9, punct[i]) << @enumToInt(tIndex.Punct) |
-            @as(u9, graph[i]) << @enumToInt(tIndex.Graph) |
-            @as(u9, symbol[i]) << @enumToInt(tIndex.Symbol);
+            @as(u9, alpha[i]) << @intFromEnum(tIndex.Alpha) |
+            @as(u9, hex[i]) << @intFromEnum(tIndex.Hex) |
+            @as(u9, space[i]) << @intFromEnum(tIndex.Space) |
+            @as(u9, digit[i]) << @intFromEnum(tIndex.Digit) |
+            @as(u9, lower[i]) << @intFromEnum(tIndex.Lower) |
+            @as(u9, upper[i]) << @intFromEnum(tIndex.Upper) |
+            @as(u9, punct[i]) << @intFromEnum(tIndex.Punct) |
+            @as(u9, graph[i]) << @intFromEnum(tIndex.Graph) |
+            @as(u9, symbol[i]) << @intFromEnum(tIndex.Symbol);
     }
     std.mem.set(u9, table[128..256], 0);
     break :init table;
 };
 
 fn inTable(c: u8, t: tIndex) bool {
-    return (combinedTable[c] & (@as(u9, 1) << @enumToInt(t))) != 0;
+    return (combinedTable[c] & (@as(u9, 1) << @intFromEnum(t))) != 0;
 }
 
 pub fn isAlNum(c: u8) bool {
-    return (combinedTable[c] & ((@as(u8, 1) << @enumToInt(tIndex.Alpha)) |
-        @as(u8, 1) << @enumToInt(tIndex.Digit))) != 0;
+    return (combinedTable[c] & ((@as(u8, 1) << @intFromEnum(tIndex.Alpha)) |
+        @as(u8, 1) << @intFromEnum(tIndex.Digit))) != 0;
 }
 
 pub fn isAlpha(c: u8) bool {
@@ -307,7 +307,7 @@ test "ascii character classes" {
 /// Caller owns returned string and must free with `allocator`.
 pub fn allocLowerString(allocator: *std.mem.Allocator, ascii_string: []const u8) ![]u8 {
     const result = try allocator.alloc(u8, ascii_string.len);
-    for (result) |*c, i| {
+    for (result, 0..) |*c, i| {
         c.* = toLower(ascii_string[i]);
     }
     return result;
@@ -323,7 +323,7 @@ test "allocLowerString" {
 /// Caller owns returned string and must free with `allocator`.
 pub fn allocUpperString(allocator: *std.mem.Allocator, ascii_string: []const u8) ![]u8 {
     const result = try allocator.alloc(u8, ascii_string.len);
-    for (result) |*c, i| {
+    for (result, 0..) |*c, i| {
         c.* = toUpper(ascii_string[i]);
     }
     return result;
@@ -338,7 +338,7 @@ test "allocUpperString" {
 /// Compares strings `a` and `b` case insensitively and returns whether they are equal.
 pub fn eqlIgnoreCase(a: []const u8, b: []const u8) bool {
     if (a.len != b.len) return false;
-    for (a) |a_c, i| {
+    for (a, 0..) |a_c, i| {
         if (toLower(a_c) != toLower(b[i])) return false;
     }
     return true;

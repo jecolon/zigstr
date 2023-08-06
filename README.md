@@ -2,7 +2,7 @@
 A UTF-8 string type.
 
 ## Zig Version
-This code will work with Zig version 0.10 stable; it is not yet updated to work with the latest master dev build.
+This code will work with Zig version 0.11 stable.
 
 ## Ownership
 There are two possibilities when creating a new Zigstr:

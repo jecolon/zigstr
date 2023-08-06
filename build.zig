@@ -1,27 +1,51 @@
-const std = @import("std");
+const Build = @import("std").Build;
 
-pub fn build(b: *std.build.Builder) void {
-    // Standard release options allow the person running `zig build` to select
-    // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall.
-    const mode = b.standardReleaseOptions();
+pub fn build(b: *Build) void {
+    const target = b.standardTargetOptions(.{});
+    const optimize = b.standardOptimizeOption(.{});
 
-    const lib = b.addStaticLibrary("zigstr", "src/Zigstr.zig");
-    lib.setBuildMode(mode);
-    lib.addPackagePath("ziglyph", "libs/ziglyph/src/ziglyph.zig");
-    lib.addPackagePath("cow_list", "libs/cow_list/src/main.zig");
-    lib.install();
+    _ = b.addModule("zigstr", .{
+        .source_file = .{ .path = "src/Zigstr.zig" },
+    });
 
-    var main_tests = b.addTest("src/main.zig");
-    main_tests.setBuildMode(mode);
-    main_tests.addPackagePath("ziglyph", "libs/ziglyph/src/ziglyph.zig");
-    main_tests.addPackagePath("cow_list", "libs/cow_list/src/main.zig");
+    const lib = b.addStaticLibrary(.{
+        .name = "zigstr",
+        .root_source_file = .{ .path = "src/main.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
 
-    var zs_tests = b.addTest("src/Zigstr.zig");
-    zs_tests.setBuildMode(mode);
-    zs_tests.addPackagePath("ziglyph", "libs/ziglyph/src/ziglyph.zig");
-    zs_tests.addPackagePath("cow_list", "libs/cow_list/src/main.zig");
+    const ziglyph = b.dependency("ziglyph", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    const ziglyph_mod = ziglyph.module("ziglyph");
+    const ziglyph_lib = ziglyph.artifact("ziglyph");
+    lib.addModule("ziglyph", ziglyph_mod);
+    lib.linkLibrary(ziglyph_lib);
 
+    const cow_list = b.dependency("cow_list", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    const cow_list_mod = cow_list.module("cow_list");
+    const cow_list_lib = cow_list.artifact("cow_list");
+    lib.addModule("cow_list", cow_list_mod);
+    lib.linkLibrary(cow_list_lib);
+
+    b.installArtifact(lib);
+
+    var main_tests = b.addTest(.{
+        .root_source_file = .{ .path = "src/Zigstr.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
+    main_tests.addModule("cow_list", cow_list_mod);
+    main_tests.linkLibrary(cow_list_lib);
+    main_tests.addModule("ziglyph", ziglyph_mod);
+    main_tests.linkLibrary(ziglyph_lib);
+
+    const run_tests = b.addRunArtifact(main_tests);
     const test_step = b.step("test", "Run library tests");
-    test_step.dependOn(&main_tests.step);
-    test_step.dependOn(&zs_tests.step);
+    test_step.dependOn(&run_tests.step);
 }

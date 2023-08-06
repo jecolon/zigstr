@@ -1,0 +1,15 @@
+.{
+    .name = "zigstr",
+    .version = "0.1.0",
+    .dependencies = .{
+	    .cow_list = .{
+		    .url = "https://github.com/jecolon/cow_list/archive/refs/heads/main.tar.gz",
+		    .hash = "1220cac93f4107205f2d078df6b7f94b7e68e61634c009d3bfec68b29bee2420e347",
+	    },
+	    .ziglyph = .{
+		    .url = "https://github.com/jecolon/ziglyph/archive/refs/heads/main.tar.gz",
+		    .hash = "1220400c10661a8b8c88bed1c195b0f71fc2636a044fd312cc0d9b2b46232424b258",
+	    },
+    },
+}
+

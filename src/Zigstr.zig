@@ -39,8 +39,8 @@ pub fn fromCodePoints(allocator: mem.Allocator, code_points: []const u21) !Self 
             .list = blk_b: {
                 var list = try std.ArrayList(u8).initCapacity(allocator, code_points.len);
                 defer list.deinit();
-                for (code_points) |cp| list.appendAssumeCapacity(@intCast(u8, cp));
-                break :blk_b CowList(u8).initOwned(allocator, list.toOwnedSlice());
+                for (code_points) |cp| list.appendAssumeCapacity(@intCast(cp));
+                break :blk_b CowList(u8).initOwned(allocator, try list.toOwnedSlice());
             },
         };
     } else {
@@ -54,7 +54,7 @@ pub fn fromCodePoints(allocator: mem.Allocator, code_points: []const u21) !Self 
                     const len = try unicode.utf8Encode(cp, &cp_buf);
                     try list.appendSlice(cp_buf[0..len]);
                 }
-                break :blk_b CowList(u8).initOwned(allocator, list.toOwnedSlice());
+                break :blk_b CowList(u8).initOwned(allocator, try list.toOwnedSlice());
             },
         };
     }
@@ -182,7 +182,7 @@ pub fn copy(self: Self, allocator: mem.Allocator) !Self {
             var list = try std.ArrayList(u8).initCapacity(allocator, self.byteLen());
             defer list.deinit();
             list.appendSliceAssumeCapacity(self.bytes());
-            break :b_blk CowList(u8).initOwned(allocator, list.toOwnedSlice());
+            break :b_blk CowList(u8).initOwned(allocator, try list.toOwnedSlice());
         },
     };
 }
@@ -239,21 +239,30 @@ pub fn isAsciiStr(str: []const u8) !bool {
 pub fn trimLeft(self: *Self, str: []const u8) !void {
     var list = try self.list.asList();
     const trimmed = mem.trimLeft(u8, list.items, str);
-    try list.replaceRange(0, list.items.len, trimmed);
+    for (trimmed, 0..) |b, i| {
+        list.items[i] = b;
+    }
+    list.items.len = trimmed.len;
 }
 
 /// trimRight removes `str` from the right of this Zigstr, mutating it.
 pub fn trimRight(self: *Self, str: []const u8) !void {
     var list = try self.list.asList();
     const trimmed = mem.trimRight(u8, list.items, str);
-    try list.replaceRange(0, list.items.len, trimmed);
+    for (trimmed, 0..) |b, i| {
+        list.items[i] = b;
+    }
+    list.items.len = trimmed.len;
 }
 
 /// trim removes `str` from both the left and right of this Zigstr, mutating it.
 pub fn trim(self: *Self, str: []const u8) !void {
     var list = try self.list.asList();
     const trimmed = mem.trim(u8, list.items, str);
-    try list.replaceRange(0, list.items.len, trimmed);
+    for (trimmed, 0..) |b, i| {
+        list.items[i] = b;
+    }
+    list.items.len = trimmed.len;
 }
 
 /// dropLeft removes `n` graphemes from the left of this Zigstr, mutating it.
@@ -367,13 +376,13 @@ pub fn count(self: Self, needle: []const u8) usize {
     return mem.count(u8, self.bytes(), needle);
 }
 
-/// tokenIter returns an iterator on tokens resulting from splitting this Zigstr at every `delim`.
+/// tokenIter returns an iterator on tokens resulting from splitting this Zigstr at any byte in `delim`.
 /// Semantics are that of `std.mem.tokenize`.
-pub fn tokenIter(self: Self, delim: []const u8) mem.TokenIterator(u8) {
-    return mem.tokenize(u8, self.bytes(), delim);
+pub fn tokenIter(self: Self, delim: []const u8) mem.TokenIterator(u8, .any) {
+    return mem.tokenizeAny(u8, self.bytes(), delim);
 }
 
-/// tokenize returns a slice of tokens resulting from splitting this Zigstr at every `delim`.
+/// tokenize returns a slice of tokens resulting from splitting this Zigstr at any byte in `delim`.
 /// Caller must free returned slice.
 pub fn tokenize(self: Self, allocator: mem.Allocator, delim: []const u8) ![][]const u8 {
     var ts = std.ArrayList([]const u8).init(allocator);
@@ -385,20 +394,20 @@ pub fn tokenize(self: Self, allocator: mem.Allocator, delim: []const u8) ![][]co
     return ts.toOwnedSlice();
 }
 
-/// splitIter returns an iterator on substrings resulting from splitting this Zigstr at every `delim`.
+/// splitIter returns an iterator on substrings resulting from splitting this Zigstr at any byte in `delim`.
 /// Semantics are that of `std.mem.split`.
-pub fn splitIter(self: Self, delim: []const u8) mem.SplitIterator(u8) {
-    return mem.split(u8, self.bytes(), delim);
+pub fn splitIter(self: Self, delim: []const u8) mem.SplitIterator(u8, .any) {
+    return mem.splitAny(u8, self.bytes(), delim);
 }
 
-/// split returns a slice of substrings resulting from splitting this Zigstr at every `delim`.
+/// split returns a slice of substrings resulting from splitting this Zigstr at any byte in `delim`.
 /// Caller must free returned slice.
 pub fn split(self: Self, allocator: mem.Allocator, delim: []const u8) ![][]const u8 {
     const slice = self.bytes();
     var ss = try std.ArrayList([]const u8).initCapacity(allocator, slice.len);
     defer ss.deinit();
 
-    var iter = mem.split(u8, slice, delim);
+    var iter = mem.splitAny(u8, slice, delim);
     while (iter.next()) |s| {
         ss.appendAssumeCapacity(s);
     }
@@ -407,7 +416,7 @@ pub fn split(self: Self, allocator: mem.Allocator, delim: []const u8) ![][]const
 }
 
 /// lineIter returns an iterator of lines separated by \n in this Zigstr.
-pub fn lineIter(self: Self) mem.SplitIterator(u8) {
+pub fn lineIter(self: Self) mem.SplitIterator(u8, .any) {
     return self.splitIter("\n");
 }
 
@@ -439,14 +448,14 @@ pub fn reverse(self: *Self) !void {
 
     var list = try std.ArrayList(u8).initCapacity(self.allocator, self.byteLen());
     defer list.deinit();
-    var gc_index: isize = @intCast(isize, gcs.len) - 1;
+    var gc_index: isize = @as(isize, @intCast(gcs.len)) - 1;
 
     while (gc_index >= 0) : (gc_index -= 1) {
-        list.appendSliceAssumeCapacity(gcs[@intCast(usize, gc_index)].bytes);
+        list.appendSliceAssumeCapacity(gcs[@intCast(gc_index)].bytes);
     }
 
     self.list.deinit();
-    self.list = CowList(u8).initOwned(self.allocator, list.toOwnedSlice());
+    self.list = CowList(u8).initOwned(self.allocator, try list.toOwnedSlice());
 }
 
 test "Zigstr reverse" {
@@ -576,10 +585,10 @@ pub fn byteAt(self: Self, i: isize) !u8 {
 
     if (i < 0) {
         if (-%i > slice.len) return error.IndexOutOfBounds;
-        return slice[slice.len - @intCast(usize, -i)];
+        return slice[slice.len - @as(usize, @intCast(-i))];
     }
 
-    return slice[@intCast(usize, i)];
+    return slice[@intCast(i)];
 }
 
 /// codePointAt returns the `i`th code point.
@@ -590,10 +599,10 @@ pub fn codePointAt(self: *Self, i: isize) !u21 {
     if (i >= cps.len) return error.IndexOutOfBounds;
     if (i < 0) {
         if (-%i > cps.len) return error.IndexOutOfBounds;
-        return cps[cps.len - @intCast(usize, -i)];
+        return cps[cps.len - @as(usize, @intCast(-i))];
     }
 
-    return cps[@intCast(usize, i)];
+    return cps[@intCast(i)];
 }
 
 /// graphemeAt returns the `i`th grapheme cluster.
@@ -604,10 +613,10 @@ pub fn graphemeAt(self: *Self, i: isize) !Grapheme {
     if (i >= gcs.len) return error.IndexOutOfBounds;
     if (i < 0) {
         if (-%i > gcs.len) return error.IndexOutOfBounds;
-        return gcs[gcs.len - @intCast(usize, -i)];
+        return gcs[gcs.len - @as(usize, @intCast(-i))];
     }
 
-    return gcs[@intCast(usize, i)];
+    return gcs[@intCast(i)];
 }
 
 /// byteSlice returnes the bytes from this Zigstr in the specified range from `start` to `end` - 1.
@@ -749,7 +758,7 @@ pub fn repeat(self: *Self, n: usize) !void {
     }
 
     self.list.deinit();
-    self.list = CowList(u8).initOwned(self.allocator, list.toOwnedSlice());
+    self.list = CowList(u8).initOwned(self.allocator, try list.toOwnedSlice());
 }
 
 test "Zigstr repeat" {
@@ -885,7 +894,7 @@ test "Zigstr graphemes" {
     const gcs = try str.graphemes(allocator);
     defer allocator.free(gcs);
 
-    for (gcs) |gc, j| {
+    for (gcs, 0..) |gc, j| {
         try expect(gc.eql(want[j]));
     }
 
