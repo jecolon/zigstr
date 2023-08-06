@@ -22,10 +22,6 @@ pub fn build(b: *Build) void {
     // Module
     _ = b.addModule("zigstr", .{
         .source_file = .{ .path = "src/Zigstr.zig" },
-        .dependencies = &[_]Build.ModuleDependency{
-            .{ .name = "cow_list", .module = cow_list_mod },
-            .{ .name = "ziglyph", .module = ziglyph_mod },
-        },
     });
 
     const lib = b.addStaticLibrary(.{
@@ -42,7 +38,7 @@ pub fn build(b: *Build) void {
     b.installArtifact(lib);
 
     var main_tests = b.addTest(.{
-        .root_source_file = .{ .path = "src/Zigstr.zig" },
+        .root_source_file = .{ .path = "src/main.zig" },
         .target = target,
         .optimize = optimize,
     });

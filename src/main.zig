@@ -30,7 +30,7 @@ test "Zigstr README tests" {
     // Collect all code points at once.
     const code_points = try str.codePoints(allocator);
     defer allocator.free(code_points);
-    for (code_points) |cp, j| {
+    for (code_points, 0..) |cp, j| {
         try expectEqual(want[j], cp);
     }
 
@@ -48,7 +48,7 @@ test "Zigstr README tests" {
     const gcs = try str.graphemes(allocator);
     defer allocator.free(gcs);
 
-    for (gcs) |gc, j| {
+    for (gcs, 0..) |gc, j| {
         try expect(gc.eql(gc_want[j]));
     }
 
