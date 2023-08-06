@@ -6,6 +6,7 @@ pub fn build(b: *Build) void {
 
     _ = b.addModule("zigstr", .{
         .source_file = .{ .path = "src/Zigstr.zig" },
+        .dependencies = &[_]Build.ModuleDependency{ cow_list_mod, ziglyph_mod },
     });
 
     const lib = b.addStaticLibrary(.{
