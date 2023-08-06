@@ -4,9 +4,28 @@ pub fn build(b: *Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    // Deps
+    const ziglyph = b.dependency("ziglyph", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    const ziglyph_mod = ziglyph.module("ziglyph");
+    const ziglyph_lib = ziglyph.artifact("ziglyph");
+
+    const cow_list = b.dependency("cow_list", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    const cow_list_mod = cow_list.module("cow_list");
+    const cow_list_lib = cow_list.artifact("cow_list");
+
+    // Module
     _ = b.addModule("zigstr", .{
         .source_file = .{ .path = "src/Zigstr.zig" },
-        .dependencies = &[_]Build.ModuleDependency{ cow_list_mod, ziglyph_mod },
+        .dependencies = &[_]Build.ModuleDependency{
+            .{ .name = "cow_list", .module = cow_list_mod },
+            .{ .name = "ziglyph", .module = ziglyph_mod },
+        },
     });
 
     const lib = b.addStaticLibrary(.{
@@ -15,22 +34,8 @@ pub fn build(b: *Build) void {
         .target = target,
         .optimize = optimize,
     });
-
-    const ziglyph = b.dependency("ziglyph", .{
-        .target = target,
-        .optimize = optimize,
-    });
-    const ziglyph_mod = ziglyph.module("ziglyph");
-    const ziglyph_lib = ziglyph.artifact("ziglyph");
     lib.addModule("ziglyph", ziglyph_mod);
     lib.linkLibrary(ziglyph_lib);
-
-    const cow_list = b.dependency("cow_list", .{
-        .target = target,
-        .optimize = optimize,
-    });
-    const cow_list_mod = cow_list.module("cow_list");
-    const cow_list_lib = cow_list.artifact("cow_list");
     lib.addModule("cow_list", cow_list_mod);
     lib.linkLibrary(cow_list_lib);
 
