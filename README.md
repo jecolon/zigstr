@@ -27,27 +27,9 @@ Given the large amounts of data required for many Unicode string operations, the
 included in the `Zigstr` struct to keep it light and fast. For the myriad Unicode text processing
 operations, check out the [Ziglyph](https://github.com/jecolon/ziglyph) library.
 
-## Integrating Zigstr in your Project
-Create a `libs` directory in the root of your Zig project and `cd` into it. Run the following `git` command:
-
-```sh
-$ git clone --recurse-submodules https://github.com/jecolon/zigstr
-```
-
-Now in your `build.zig` you can add to your `lib` or `exe` etc.:
-
-```zig
-const cow_list = std.build.Pkg{ .name = "cow_list", .source = .{ .path = "libs/zigstr/libs/cow_list/src/main.zig" } };
-const ziglyph = std.build.Pkg{ .name = "ziglyph", .source = .{ .path = "libs/zigstr/libs/ziglyph/src/ziglyph.zig" } };
-const Zigstr = std.build.Pkg{
-    .name = "Zigstr",
-    .source = .{ .path = "libs/zigstr/src/Zigstr.zig" },
-    .dependencies = &[_]std.build.Pkg{ cow_list, ziglyph },
-};
-exe.addPackage(Zigstr);
-```
-
-Note the above `build.zig` complexity will be eliminated once Zig has an official package manager.
+## Adding Zigstr to your Project
+Zigstr uses the Zig build system and official package manager, so integration is the same as any other Zig 
+module.
 
 ## Usage Examples
 ```zig

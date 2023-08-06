@@ -10,7 +10,7 @@ pub fn build(b: *Build) void {
 
     const lib = b.addStaticLibrary(.{
         .name = "zigstr",
-        .root_source_file = .{ .path = "src/main.zig" },
+        .root_source_file = .{ .path = "src/Zigstr.zig" },
         .target = target,
         .optimize = optimize,
     });
