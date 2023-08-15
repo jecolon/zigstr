@@ -4,6 +4,33 @@ A UTF-8 string type.
 ## Zig Version
 This code will work with Zig version 0.11 stable.
 
+## Adding Zigstr to your Project
+Zigstr uses the Zig build system and official package manager, so integration is the same as any other Zig 
+module. In `build.zig.zon` add:
+
+```
+.dependencies = .{
+    .zigstr = .{
+		   .url = "https://github.com/jecolon/zigstr/archive/refs/heads/main.tar.gz",
+		   .hash = "122051a9526743a9154d720a1b68754f3734a46d470c19fc6fe6015dbea1193e1bb4",
+    },
+},
+```
+
+and in `build.zig`:
+
+```
+const zigstr = b.dependency("zigstr", .{
+    .target = target,
+    .optimize = optimize,
+});
+
+// exe, lib, tests, etc.
+exe.addModule("zigstr", zigstr.module("zigstr"));
+```
+
+With this, you can now `@import("zigstr")` in your files.
+
 ## Ownership
 There are two possibilities when creating a new Zigstr:
 
@@ -21,16 +48,6 @@ defer str.deinit(); // still need `deinit` to free other resources, but not the 
 var str = try Zigstr.fromOwnedBytes(allocator, slice);
 defer str.deinit(); // owned bytes will be freed.
 ```
-
-## String Comparison, Sorting (Collation), Normalization, Display With, and More
-Given the large amounts of data required for many Unicode string operations, these operations are not 
-included in the `Zigstr` struct to keep it light and fast. For the myriad Unicode text processing
-operations, check out the [Ziglyph](https://github.com/jecolon/ziglyph) library.
-
-## Adding Zigstr to your Project
-Zigstr uses the Zig build system and official package manager, so integration is the same as any other Zig 
-module. NOTE: As of Zig 0.11.0 release, the dependencies are not loading correctly, and thus this package will
-not build. I'm trying to find possible workarounds at the moment.
 
 ## Usage Examples
 ```zig
