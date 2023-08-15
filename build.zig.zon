@@ -8,7 +8,7 @@
 	    },
 	    .ziglyph = .{
 		    .url = "https://github.com/jecolon/ziglyph/archive/refs/heads/main.tar.gz",
-		    .hash = "1220400c10661a8b8c88bed1c195b0f71fc2636a044fd312cc0d9b2b46232424b258",
+		    .hash = "12205262f7e82e89a1455f07dcc6d5aa1e3c08d87d53b6b715dc98e92de3523a0971",
 	    },
     },
 }

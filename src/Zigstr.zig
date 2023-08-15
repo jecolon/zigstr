@@ -132,7 +132,7 @@ pub fn codePoints(self: *Self, allocator: mem.Allocator) ![]u21 {
 
     var iter = self.codePointIter();
     while (iter.next()) |cp| {
-        code_points.appendAssumeCapacity(cp.scalar);
+        code_points.appendAssumeCapacity(cp.code);
     }
 
     return code_points.toOwnedSlice();
@@ -320,7 +320,7 @@ pub fn insert(self: *Self, str: []const u8, n: usize) !void {
     if (n < gcs.len) {
         try list.insertSlice(gcs[n].offset, str);
     } else {
-        try list.insertSlice(gcs[n - 1].offset + gcs[n - 1].bytes.len, str);
+        try list.insertSlice(gcs[n - 1].offset + gcs[n - 1].len, str);
     }
 }
 
@@ -337,13 +337,13 @@ test "Zigstr insertions" {
 }
 
 /// indexOf returns the index of `needle` in this Zigstr or null if not found.
-pub fn indexOf(self: Self, needle: []const u8) !?usize {
+pub fn indexOf(self: Self, needle: []const u8) ?usize {
     if (needle.len > 0) {
         const slice = self.bytes();
 
         if (mem.indexOf(u8, slice, needle)) |end| {
             var i: usize = 0;
-            var iter = try GraphemeIterator.init(slice[0..end]);
+            var iter = GraphemeIterator.init(slice[0..end]);
             while (iter.next()) |_| : (i += 1) {} else return i;
         }
     }
@@ -352,18 +352,18 @@ pub fn indexOf(self: Self, needle: []const u8) !?usize {
 }
 
 /// containes ceonvenience method to check if `str` is a substring of this Zigstr.
-pub fn contains(self: Self, str: []const u8) !bool {
-    return (try self.indexOf(str)) != null;
+pub fn contains(self: Self, str: []const u8) bool {
+    return (self.indexOf(str)) != null;
 }
 
 /// lastIndexOf returns the index of `needle` in this Zigstr starting from the end, or null if not found.
-pub fn lastIndexOf(self: Self, needle: []const u8) !?usize {
+pub fn lastIndexOf(self: Self, needle: []const u8) ?usize {
     if (needle.len > 0) {
         const slice = self.bytes();
 
         if (mem.lastIndexOf(u8, slice, needle)) |end| {
             var i: usize = 0;
-            var iter = try GraphemeIterator.init(slice[0..end]);
+            var iter = GraphemeIterator.init(slice[0..end]);
             while (iter.next()) |_| : (i += 1) {} else return i;
         }
     }
@@ -451,7 +451,8 @@ pub fn reverse(self: *Self) !void {
     var gc_index: isize = @as(isize, @intCast(gcs.len)) - 1;
 
     while (gc_index >= 0) : (gc_index -= 1) {
-        list.appendSliceAssumeCapacity(gcs[@intCast(gc_index)].bytes);
+        const the_gc = gcs[@intCast(gc_index)];
+        list.appendSliceAssumeCapacity(self.bytes()[the_gc.offset .. the_gc.offset + the_gc.len]);
     }
 
     self.list.deinit();
@@ -868,7 +869,7 @@ test "Zigstr code points" {
     var want = [_]u21{ 'H', 0x00E9, 'l', 'l', 'o' };
     var i: usize = 0;
     while (cp_iter.next()) |cp| : (i += 1) {
-        try expectEqual(want[i], cp.scalar);
+        try expectEqual(want[i], cp.code);
     }
 
     const cps = try str.codePoints(allocator);
@@ -888,14 +889,14 @@ test "Zigstr graphemes" {
     var want = [_][]const u8{ "H", "é", "l", "l", "o" };
     var i: usize = 0;
     while (giter.next()) |gc| : (i += 1) {
-        try expect(gc.eql(want[i]));
+        try expect(gc.eql(str.bytes(), want[i]));
     }
 
     const gcs = try str.graphemes(allocator);
     defer allocator.free(gcs);
 
     for (gcs, 0..) |gc, j| {
-        try expect(gc.eql(want[j]));
+        try expect(gc.eql(str.bytes(), want[j]));
     }
 
     try expectEqual(@as(usize, 6), str.byteLen());
@@ -946,26 +947,26 @@ test "Zigstr indexOf" {
     var str = try fromConstBytes(std.testing.allocator, "😊 Héllo world");
     defer str.deinit();
 
-    try expectEqual(try str.indexOf("😊"), 0);
-    try expectEqual(try str.indexOf("l"), 4);
-    try expectEqual(try str.indexOf("lo"), 5);
-    try expectEqual(try str.indexOf("orld"), 9);
-    try expectEqual(try str.indexOf("z"), null);
-    try expectEqual(try str.indexOf(""), null);
-    try expect(try str.contains("l"));
-    try expect(!try str.contains("z"));
+    try expectEqual(str.indexOf("😊"), 0);
+    try expectEqual(str.indexOf("l"), 4);
+    try expectEqual(str.indexOf("lo"), 5);
+    try expectEqual(str.indexOf("orld"), 9);
+    try expectEqual(str.indexOf("z"), null);
+    try expectEqual(str.indexOf(""), null);
+    try expect(str.contains("l"));
+    try expect(!str.contains("z"));
 }
 
 test "Zigstr lastIndexOf" {
     var str = try fromConstBytes(std.testing.allocator, "Héllo lol 😊");
     defer str.deinit();
 
-    try expectEqual(try str.lastIndexOf("l"), 8);
-    try expectEqual(try str.lastIndexOf("lo"), 6);
-    try expectEqual(try str.lastIndexOf(" 😊"), 9);
-    try expectEqual(try str.lastIndexOf("😊"), 10);
-    try expectEqual(try str.lastIndexOf("z"), null);
-    try expectEqual(try str.lastIndexOf(""), null);
+    try expectEqual(str.lastIndexOf("l"), 8);
+    try expectEqual(str.lastIndexOf("lo"), 6);
+    try expectEqual(str.lastIndexOf(" 😊"), 9);
+    try expectEqual(str.lastIndexOf("😊"), 10);
+    try expectEqual(str.lastIndexOf("z"), null);
+    try expectEqual(str.lastIndexOf(""), null);
 }
 
 test "Zigstr count" {
@@ -1098,8 +1099,8 @@ test "Zigstr xAt" {
     try expectEqual(try str.codePointAt(-5), 0x0065);
     try expectError(error.IndexOutOfBounds, str.codePointAt(6));
     try expectError(error.IndexOutOfBounds, str.codePointAt(-7));
-    try expect((try str.graphemeAt(1)).eql("\u{0065}\u{0301}"));
-    try expect((try str.graphemeAt(-4)).eql("\u{0065}\u{0301}"));
+    try expect((try str.graphemeAt(1)).eql(str.bytes(), "\u{0065}\u{0301}"));
+    try expect((try str.graphemeAt(-4)).eql(str.bytes(), "\u{0065}\u{0301}"));
     try expectError(error.IndexOutOfBounds, str.graphemeAt(5));
     try expectError(error.IndexOutOfBounds, str.graphemeAt(-6));
 }
@@ -1119,7 +1120,7 @@ test "Zigstr extractions" {
 
     const gcs = try str.graphemeSlice(allocator, 1, 2);
     defer allocator.free(gcs);
-    try expect(gcs[0].eql("\u{0065}\u{0301}"));
+    try expect(gcs[0].eql(str.bytes(), "\u{0065}\u{0301}"));
 
     // Substrings
     var sub = try str.substr(1, 2);

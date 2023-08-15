@@ -21,7 +21,7 @@ test "Zigstr README tests" {
 
     var i: usize = 0;
     while (cp_iter.next()) |cp| : (i += 1) {
-        try expectEqual(want[i], cp.scalar);
+        try expectEqual(want[i], cp.code);
     }
 
     // Code point count.
@@ -40,7 +40,7 @@ test "Zigstr README tests" {
 
     i = 0;
     while (giter.next()) |gc| : (i += 1) {
-        try expect(gc.eql(gc_want[i]));
+        try expect(gc.eql(str.bytes(), gc_want[i]));
     }
 
     // Collect all grapheme clusters at once.
@@ -49,7 +49,7 @@ test "Zigstr README tests" {
     defer allocator.free(gcs);
 
     for (gcs, 0..) |gc, j| {
-        try expect(gc.eql(gc_want[j]));
+        try expect(gc.eql(str.bytes(), gc_want[j]));
     }
 
     // Grapheme count.
@@ -60,8 +60,8 @@ test "Zigstr README tests" {
     try expectEqual(try str.byteAt(-2), 108); // l
     try expectEqual(try str.codePointAt(0), 'H');
     try expectEqual(try str.codePointAt(-2), 'l');
-    try expect((try str.graphemeAt(0)).eql("H"));
-    try expect((try str.graphemeAt(-4)).eql("é"));
+    try expect((try str.graphemeAt(0)).eql(str.bytes(), "H"));
+    try expect((try str.graphemeAt(-4)).eql(str.bytes(), "é"));
 
     // Copy
     var str2 = try str.copy(allocator);
@@ -99,12 +99,12 @@ test "Zigstr README tests" {
 
     // indexOf / contains / lastIndexOf
     try str.reset("H\u{65}\u{301}llo"); // Héllo
-    try expectEqual(try str.indexOf("l"), 2);
-    try expectEqual(try str.indexOf("z"), null);
-    try expect(try str.contains("l"));
-    try expect(!try str.contains("z"));
-    try expectEqual(try str.lastIndexOf("l"), 3);
-    try expectEqual(try str.lastIndexOf("z"), null);
+    try expectEqual(str.indexOf("l"), 2);
+    try expectEqual(str.indexOf("z"), null);
+    try expect(str.contains("l"));
+    try expect(!str.contains("z"));
+    try expectEqual(str.lastIndexOf("l"), 3);
+    try expectEqual(str.lastIndexOf("z"), null);
 
     // count
     try expectEqual(str.count("l"), 2);
@@ -267,7 +267,7 @@ test "Zigstr README tests" {
 
     const gs = try str.graphemeSlice(allocator, 1, 2);
     defer allocator.free(gs);
-    try expect(gs[0].eql("\u{0065}\u{0301}"));
+    try expect(gs[0].eql(str.bytes(), "\u{0065}\u{0301}"));
 
     // Substrings
     var sub = try str.substr(1, 2);
