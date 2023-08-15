@@ -12,7 +12,7 @@ module. In `build.zig.zon` add:
 .dependencies = .{
     .zigstr = .{
 		   .url = "https://github.com/jecolon/zigstr/archive/refs/heads/main.tar.gz",
-		   .hash = "122051a9526743a9154d720a1b68754f3734a46d470c19fc6fe6015dbea1193e1bb4",
+                   .hash = "122057e86335d93a4bd3b0858a94cc680f8c74f6b664e80a324ac8aaab3e10347aef",
     },
 },
 ```
