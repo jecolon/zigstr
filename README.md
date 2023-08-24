@@ -11,7 +11,7 @@ module. To track the main development branch, in `build.zig.zon` add:
 ```
 .dependencies = .{
     .zigstr = .{
-        .url = "https://github.com/jecolon/zigstr/archive/refs/heads/main.tar.gz",
+        .url = "https://github.com/jecolon/zigstr/archive/refs/tags/v0.11.1.tar.gz",
     },
 },
 ```
@@ -30,16 +30,6 @@ exe.addModule("zigstr", zigstr.module("zigstr"));
 
 When yu now try to build your project, the compiler will produce a hash mismatch error, indicating
 the hash that you should add to `build.zig.zon` to make the build work.
-
-You can also depend on specific commit tags for example:
-
-```
-.dependencies = .{
-    .zigstr = .{
-        .url = "https://github.com/jecolon/zigstr/archive/refs/tags/v0.11.0.tar.gz",
-    },
-},
-```
 
 To see available tags click [here](https://github.com/jecolon/zigstr/tags) and when you click
 on a tag name, you'll see the link to the `tar.gz` file under **Assets**.

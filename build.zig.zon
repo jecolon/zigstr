@@ -1,6 +1,6 @@
 .{
     .name = "zigstr",
-    .version = "0.1.0",
+    .version = "0.11.1",
     .dependencies = .{
 	    .cow_list = .{
 		    .url = "https://github.com/jecolon/cow_list/archive/refs/tags/v0.11.0.tar.gz",
