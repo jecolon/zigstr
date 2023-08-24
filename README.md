@@ -6,18 +6,17 @@ This code will work with Zig version 0.11 stable.
 
 ## Adding Zigstr to your Project
 Zigstr uses the Zig build system and official package manager, so integration is the same as any other Zig 
-module. In `build.zig.zon` add:
+module. To track the main development branch, in `build.zig.zon` add:
 
 ```
 .dependencies = .{
     .zigstr = .{
-		   .url = "https://github.com/jecolon/zigstr/archive/refs/heads/main.tar.gz",
-                   .hash = "122057e86335d93a4bd3b0858a94cc680f8c74f6b664e80a324ac8aaab3e10347aef",
+        .url = "https://github.com/jecolon/zigstr/archive/refs/heads/main.tar.gz",
     },
 },
 ```
 
-and in `build.zig`:
+and in your `build.zig`:
 
 ```
 const zigstr = b.dependency("zigstr", .{
@@ -29,7 +28,23 @@ const zigstr = b.dependency("zigstr", .{
 exe.addModule("zigstr", zigstr.module("zigstr"));
 ```
 
-With this, you can now `@import("zigstr")` in your files.
+When yu now try to build your project, the compiler will produce a hash mismatch error, indicating
+the hash that you should add to `build.zig.zon` to make the build work.
+
+You can also depend on specific commit tags for example:
+
+```
+.dependencies = .{
+    .zigstr = .{
+        .url = "https://github.com/jecolon/zigstr/archive/refs/tags/v0.11.0.tar.gz",
+    },
+},
+```
+
+To see available tags click [here](https://github.com/jecolon/zigstr/tags) and when you click
+on a tag name, you'll see the link to the `tar.gz` file under **Assets**.
+
+With all this, you can now `@import("zigstr")` in your project.
 
 ## Ownership
 There are two possibilities when creating a new Zigstr:
