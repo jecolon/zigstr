@@ -3,12 +3,11 @@ const mem = std.mem;
 const unicode = std.unicode;
 
 const CowList = @import("cow_list").CowList;
-const ascii = @import("ascii.zig");
 const ziglyph = @import("ziglyph");
 const CodePointIterator = ziglyph.CodePointIterator;
 const Grapheme = ziglyph.Grapheme;
 const GraphemeIterator = Grapheme.GraphemeIterator;
-const prop_list = ziglyph.prop_list;
+const properties = ziglyph.properties;
 
 const Self = @This();
 
@@ -550,7 +549,7 @@ pub fn isBlank(self: *Self) !bool {
     defer self.allocator.free(cps);
 
     return for (cps) |cp| {
-        if (!prop_list.isWhiteSpace(cp)) break false;
+        if (!properties.isWhiteSpace(cp)) break false;
     } else true;
 }
 

@@ -3,12 +3,12 @@
     .version = "0.1.0",
     .dependencies = .{
 	    .cow_list = .{
-		    .url = "https://github.com/jecolon/cow_list/archive/refs/heads/main.tar.gz",
-		    .hash = "1220cac93f4107205f2d078df6b7f94b7e68e61634c009d3bfec68b29bee2420e347",
+		    .url = "https://github.com/jecolon/cow_list/archive/refs/tags/v0.11.0.tar.gz",
+		    .hash = "1220bf78976b497aaf13e26bb353cb8099c8f7e9ea28dd25462915d4533daa26097f",
 	    },
 	    .ziglyph = .{
-		    .url = "https://github.com/jecolon/ziglyph/archive/refs/heads/main.tar.gz",
-		    .hash = "12205262f7e82e89a1455f07dcc6d5aa1e3c08d87d53b6b715dc98e92de3523a0971",
+		    .url = "https://github.com/jecolon/ziglyph/archive/refs/tags/v0.11.1.tar.gz",
+		    .hash = "1220dee955839b7f267c1bb21e0ee60888c08f408c30f0722b243cabcc8cce8b7508",
 	    },
     },
 }
