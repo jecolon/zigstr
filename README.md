@@ -28,7 +28,7 @@ const zigstr = b.dependency("zigstr", .{
 exe.addModule("zigstr", zigstr.module("zigstr"));
 ```
 
-When yu now try to build your project, the compiler will produce a hash mismatch error, indicating
+When you now try to build your project, the compiler will produce a hash mismatch error, indicating
 the hash that you should add to `build.zig.zon` to make the build work.
 
 To see available tags click [here](https://github.com/jecolon/zigstr/tags) and when you click
@@ -103,7 +103,7 @@ test "Zigstr README tests" {
         try expect(gc.eql(str.bytes(), gc_want[j]));
     }
 
-    // Grapheme count.
+    // Length by graphemes.
     try expectEqual(@as(usize, 5), try str.graphemeLen());
 
     // Indexing (with negative indexes too.)
@@ -157,7 +157,7 @@ test "Zigstr README tests" {
     try expectEqual(str.lastIndexOf("l"), 3);
     try expectEqual(str.lastIndexOf("z"), null);
 
-    // count
+    // Count occurrences of substrings.
     try expectEqual(str.count("l"), 2);
     try expectEqual(str.count("ll"), 1);
     try expectEqual(str.count("z"), 0);
@@ -231,7 +231,7 @@ test "Zigstr README tests" {
     try expectEqual(@as(usize, 2), replacements);
     try expect(str.eql("Heo"));
 
-    // Append a code point or many.
+    // Append code points.
     try str.reset("Hell");
     try str.append('o');
     try expectEqual(@as(usize, 5), str.byteLen());
